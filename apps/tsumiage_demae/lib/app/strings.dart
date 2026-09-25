@@ -3,13 +3,16 @@ import 'package:flutter/widgets.dart';
 import '../game/engine.dart';
 import 'scope.dart';
 
-/// All user-facing text, in Japanese and English.
+/// All user-facing text, in Japanese and English. Feedback is spoken by the
+/// delivery cat, so it is written in their voice rather than as system
+/// messages.
 abstract class Strings {
   const Strings();
 
   static Strings of(BuildContext context) => AppScope.of(context).settings.strings(context);
 
   String get appTitle;
+  String get appTitleKana;
   String get tagline;
 
   // Title
@@ -18,22 +21,22 @@ abstract class Strings {
   String get stages;
   String get howToPlay;
   String get settings;
+  String get openSign;
 
   // Stage select
   String chapterLabel(int n);
   String clearedCount(int n, int total);
   String get locked;
   String get lockedHint;
-  String starsTotal(int n, int total);
 
-  // Game HUD
+  // Game
+  String get orders;
   String get onHead;
-  String get empty;
   String capacity(int n);
-  String delivered(int done, int total);
-  String movesLabel(int n);
-  String parLabel(int n);
-  String bestLabel(int? n);
+  String get movesWord;
+  String get parWord;
+  String get bestWord;
+  String get servedStamp;
   String get undo;
   String get redo;
   String get restart;
@@ -41,11 +44,12 @@ abstract class Strings {
   String get rules;
   String get back;
 
-  // Feedback
-  String blocked(Blocked b, {String? wanted, String? top});
+  // The cat's lines
+  String blocked(Blocked b, {String? wanted});
   String get stuckTitle;
   String get stuckBody;
   String hintArrow(Dir d);
+  String get greeting;
 
   // Result
   String get clearTitle;
@@ -65,6 +69,7 @@ abstract class Strings {
   String gimmickDesc(String id);
   String get newGimmick;
   String get gotIt;
+  String get nextPage;
   String dishName(String c);
 
   // Settings
@@ -101,45 +106,47 @@ class StringsJa extends Strings {
   @override
   String get appTitle => 'つみあげ出前';
   @override
+  String get appTitleKana => 'つみあげでまえ';
+  @override
   String get tagline => '頭の上に積んで、順番どおりにお届け';
   @override
-  String get play => 'あそぶ';
+  String get play => 'はじめる';
   @override
   String get continueFrom => 'つづきから';
   @override
-  String get stages => 'ステージ';
+  String get stages => 'お品書き';
   @override
   String get howToPlay => 'あそびかた';
   @override
   String get settings => '設定';
   @override
-  String chapterLabel(int n) => '第$n章';
+  String get openSign => '営業中';
   @override
-  String clearedCount(int n, int total) => '$n / $total クリア';
+  String chapterLabel(int n) => '第${const ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'][n.clamp(0, 9)]}章';
   @override
-  String get locked => 'まだ遊べません';
+  String clearedCount(int n, int total) => '$n / $total 品';
   @override
-  String get lockedHint => '前のステージをクリアすると遊べるようになります。';
+  String get locked => '準備中';
   @override
-  String starsTotal(int n, int total) => '★ $n / $total';
+  String get lockedHint => 'まだ準備中です。前のお店の出前を先に届けよう。';
+  @override
+  String get orders => 'ご注文';
   @override
   String get onHead => '頭の上';
   @override
-  String get empty => 'なし';
+  String capacity(int n) => '$n皿まで';
   @override
-  String capacity(int n) => '最大 $n 皿';
+  String get movesWord => '手数';
   @override
-  String delivered(int done, int total) => '配達 $done / $total';
+  String get parWord => '目標';
   @override
-  String movesLabel(int n) => '$n 手';
+  String get bestWord => '最少';
   @override
-  String parLabel(int n) => '目標 $n 手';
+  String get servedStamp => '済';
   @override
-  String bestLabel(int? n) => n == null ? '最少 —' : '最少 $n 手';
+  String get undo => '戻す';
   @override
-  String get undo => '1手戻す';
-  @override
-  String get redo => '1手進む';
+  String get redo => '進む';
   @override
   String get restart => 'やり直す';
   @override
@@ -150,68 +157,72 @@ class StringsJa extends Strings {
   String get back => 'もどる';
 
   @override
-  String blocked(Blocked b, {String? wanted, String? top}) => switch (b) {
+  String blocked(Blocked b, {String? wanted}) => switch (b) {
         Blocked.wall => '',
-        Blocked.oneWay => '一方通行です',
-        Blocked.full => 'もう載せられません',
-        Blocked.wrongDish => '${dishName(wanted ?? 'a')}が一番上にありません',
-        Blocked.emptyHands => '料理を持っていません',
-        Blocked.alreadyServed => 'もう届けました',
-        Blocked.counterUsed => '返却口は使用済みです',
+        Blocked.oneWay => 'こっちからは入れないね',
+        Blocked.full => 'もう持てないよ〜',
+        Blocked.wrongDish => '${dishName(wanted ?? 'a')}がいちばん上じゃないと…',
+        Blocked.emptyHands => 'あっ、手ぶらだった',
+        Blocked.alreadyServed => 'もう届けたよ',
+        Blocked.counterUsed => '返却口はもう閉まってる',
         Blocked.finished => '',
       };
   @override
-  String get stuckTitle => 'もう全員には配れません';
+  String get stuckTitle => 'あれれ…もう全員には届けられないみたい';
   @override
-  String get stuckBody => '1手戻すか、最初からやり直しましょう。';
+  String get stuckBody => '1手戻すか、はじめからやり直そう';
   @override
-  String hintArrow(Dir d) => 'ヒント：${_dirJa(d)}へ';
+  String hintArrow(Dir d) => 'つぎは${_dirJa(d)}かな？';
   @override
-  String get clearTitle => '配達完了！';
+  String get greeting => 'いってきまーす！';
   @override
-  String clearBody(int moves, int par) => '$moves 手でクリア（目標 $par 手）';
+  String get clearTitle => '毎度あり！';
   @override
-  String get newBest => '自己ベスト更新';
+  String clearBody(int moves, int par) => '$moves手で配達（目標 $par手）';
   @override
-  String get perfect => '目標手数でクリア';
+  String get newBest => 'ベスト更新';
   @override
-  String get next => '次のステージへ';
+  String get perfect => '目標どおり';
+  @override
+  String get next => '次の出前へ';
   @override
   String get retry => 'もう一度';
   @override
-  String get toStages => 'ステージ一覧';
+  String get toStages => 'お品書き';
   @override
-  String get allClearTitle => '全ステージ配達完了！';
+  String get allClearTitle => '本日の出前、ぜんぶ完了！';
   @override
-  String get allClearBody => 'お疲れさまでした。★3を目指して、もう一度挑戦してみませんか。';
+  String get allClearBody => 'おつかれさまでした。目標手数の判子を集めに、また来てね。';
 
   @override
-  String get ruleShort => '料理の上を通ると、頭の上に積み上がる（通れば必ず拾う）。お客さんにぶつかると、一番上の料理を渡す。欲しい料理が一番上にないと渡せない。全員に配ったらクリア。';
+  String get ruleShort => '料理の上を通ると、頭の上に積み上がる（通れば必ず拾う）。お客さんにぶつかると、いちばん上の料理を渡す。注文の料理がいちばん上にないと渡せない。全員に届けたら完了。';
   @override
   List<(String, String)> get howToPages => const [
-        ('料理を拾う', '料理の上を通ると、頭の上に積み上がります。通れば必ず拾うので、通る道順が大切です。一度に載せられる皿の数には上限があります。'),
-        ('順番に届ける', 'お客さんにぶつかると、一番上の料理を渡します。吹き出しの料理が一番上にないと渡せません。あとから拾った料理ほど上に来ます。'),
-        ('全員に配ろう', 'すべてのお客さんに届けたらクリア。余分な料理が残っていても大丈夫です。目標手数以内なら★3つ。'),
-        ('困ったときは', '「1手戻す」は何度でも使えます。どうしても分からないときは「ヒント」で次の一手が分かります。詰んだときはお知らせします。'),
+        ('料理を拾う', '料理の上を通ると、頭の上に積み上がるよ。通れば必ず拾うから、どの道を通るかが大事。一度に載せられるお皿には限りがあるんだ。'),
+        ('順番に届ける', 'お客さんにぶつかると、いちばん上の料理を渡すよ。伝票の料理がいちばん上にないと渡せない。あとから拾った料理ほど上に来るからね。'),
+        ('みんなに届けよう', 'お客さん全員に届けたら出前完了。余った料理があっても大丈夫。目標の手数で届けられたら、判子が3つもらえるよ。'),
+        ('困ったときは', '「戻す」は何回でも使えるよ。わからなくなったら「ヒント」で、次に進む方に足あとをつけてあげる。'),
       ];
   @override
   String gimmickName(String id) => switch (id) {
         'counter' => '返却口',
-        'tray' => 'くるりトレイ',
+        'tray' => 'くるりのお盆',
         'oneWay' => '一方通行',
         _ => '',
       };
   @override
   String gimmickDesc(String id) => switch (id) {
-        'counter' => '体当たりすると、一番上の料理を1皿だけ引き取ってくれる。使えるのは1回だけ。',
-        'tray' => '乗ると、頭の上の料理の順番が上下さかさまになる。',
-        'oneWay' => '矢印の向きに進むときだけ入れる床。',
+        'counter' => 'ぶつかると、いちばん上の料理を1皿だけ引き取ってくれる。使えるのは1回だけで、そのあとはシャッターが閉まるよ。',
+        'tray' => '上に乗ると、頭の上の料理の順番が上下さかさまになるよ。',
+        'oneWay' => '矢印の向きに進むときだけ入れる道。戻り道に気をつけて。',
         _ => '',
       };
   @override
-  String get newGimmick => '新しいしかけ';
+  String get newGimmick => 'おしらせ';
   @override
   String get gotIt => 'わかった';
+  @override
+  String get nextPage => 'つぎへ';
   @override
   String dishName(String c) => switch (c) { 'a' => 'トマト', 'b' => '抹茶だんご', 'c' => '卵焼き', _ => 'ぶどう' };
 
@@ -224,27 +235,27 @@ class StringsJa extends Strings {
   @override
   String get language => '言語';
   @override
-  String get languageSystem => '端末の設定';
+  String get languageSystem => '端末';
   @override
-  String get theme => '表示モード';
+  String get theme => '営業時間';
   @override
-  String get themeSystem => '端末の設定';
+  String get themeSystem => '端末';
   @override
-  String get themeLight => 'ライト';
+  String get themeLight => '昼';
   @override
-  String get themeDark => 'ダーク';
+  String get themeDark => '夜';
   @override
-  String get reduceMotion => 'アニメーションを減らす';
+  String get reduceMotion => '動きを減らす';
   @override
-  String get reduceMotionSub => '移動や揺れの動きを止めます';
+  String get reduceMotionSub => '移動や揺れのアニメーションを止めます';
   @override
   String get resetProgress => '記録を消す';
   @override
-  String get resetConfirm => 'すべてのクリア記録と最少手数を消します。元に戻せません。';
+  String get resetConfirm => 'すべての配達記録と判子を消します。元に戻せません。';
   @override
   String get resetDone => '記録を消しました';
   @override
-  String get cancel => 'キャンセル';
+  String get cancel => 'やめる';
   @override
   String get reset => '消す';
   @override
@@ -263,7 +274,7 @@ class StringsJa extends Strings {
   }
 
   @override
-  String get keyboardHelp => '矢印キー／WASDで移動、Zで戻す、Yで進める、Rでやり直し、Hでヒント';
+  String get keyboardHelp => '矢印キー／WASDで移動、Zで戻す、Yで進む、Rでやり直し、Hでヒント';
 }
 
 class StringsEn extends Strings {
@@ -272,41 +283,43 @@ class StringsEn extends Strings {
   @override
   String get appTitle => 'Stack & Deliver';
   @override
-  String get tagline => 'Stack dishes on your head, serve them in order';
+  String get appTitleKana => 'tsumiage demae';
   @override
-  String get play => 'Play';
+  String get tagline => 'Stack it on your head, serve it in order';
+  @override
+  String get play => 'Start';
   @override
   String get continueFrom => 'Continue';
   @override
-  String get stages => 'Stages';
+  String get stages => 'Menu';
   @override
   String get howToPlay => 'How to play';
   @override
   String get settings => 'Settings';
   @override
+  String get openSign => 'OPEN';
+  @override
   String chapterLabel(int n) => 'Chapter $n';
   @override
-  String clearedCount(int n, int total) => '$n / $total cleared';
+  String clearedCount(int n, int total) => '$n / $total';
   @override
-  String get locked => 'Locked';
+  String get locked => 'Closed';
   @override
-  String get lockedHint => 'Clear earlier stages to unlock this one.';
+  String get lockedHint => 'Not open yet. Finish the earlier deliveries first.';
   @override
-  String starsTotal(int n, int total) => '★ $n / $total';
+  String get orders => 'Orders';
   @override
   String get onHead => 'On head';
   @override
-  String get empty => 'none';
-  @override
   String capacity(int n) => 'max $n';
   @override
-  String delivered(int done, int total) => 'Served $done / $total';
+  String get movesWord => 'Moves';
   @override
-  String movesLabel(int n) => n == 1 ? '1 move' : '$n moves';
+  String get parWord => 'Par';
   @override
-  String parLabel(int n) => 'Par $n';
+  String get bestWord => 'Best';
   @override
-  String bestLabel(int? n) => n == null ? 'Best —' : 'Best $n';
+  String get servedStamp => '✓';
   @override
   String get undo => 'Undo';
   @override
@@ -321,68 +334,72 @@ class StringsEn extends Strings {
   String get back => 'Back';
 
   @override
-  String blocked(Blocked b, {String? wanted, String? top}) => switch (b) {
+  String blocked(Blocked b, {String? wanted}) => switch (b) {
         Blocked.wall => '',
-        Blocked.oneWay => 'One-way floor',
-        Blocked.full => 'Can\'t carry any more',
-        Blocked.wrongDish => '${dishName(wanted ?? 'a')} is not on top',
-        Blocked.emptyHands => 'Nothing to hand over',
-        Blocked.alreadyServed => 'Already served',
-        Blocked.counterUsed => 'Counter already used',
+        Blocked.oneWay => 'Can\'t get in from this side',
+        Blocked.full => 'I can\'t carry any more!',
+        Blocked.wrongDish => 'The ${dishName(wanted ?? 'a').toLowerCase()} has to be on top…',
+        Blocked.emptyHands => 'Oops, my hands are empty',
+        Blocked.alreadyServed => 'Already served them',
+        Blocked.counterUsed => 'The counter\'s closed now',
         Blocked.finished => '',
       };
   @override
-  String get stuckTitle => 'Not everyone can be served now';
+  String get stuckTitle => 'Uh-oh… I can\'t serve everyone now';
   @override
-  String get stuckBody => 'Undo a move or restart the stage.';
+  String get stuckBody => 'Undo a move, or start over';
   @override
-  String hintArrow(Dir d) => 'Hint: go ${_dirEn(d)}';
+  String hintArrow(Dir d) => 'Maybe ${_dirEn(d)}?';
   @override
-  String get clearTitle => 'All served!';
+  String get greeting => 'Off I go!';
   @override
-  String clearBody(int moves, int par) => 'Cleared in $moves (par $par)';
+  String get clearTitle => 'Thank you!';
+  @override
+  String clearBody(int moves, int par) => 'Delivered in $moves (par $par)';
   @override
   String get newBest => 'New best';
   @override
-  String get perfect => 'Cleared at par';
+  String get perfect => 'On par';
   @override
-  String get next => 'Next stage';
+  String get next => 'Next order';
   @override
-  String get retry => 'Retry';
+  String get retry => 'Again';
   @override
-  String get toStages => 'Stages';
+  String get toStages => 'Menu';
   @override
   String get allClearTitle => 'Every order delivered!';
   @override
-  String get allClearBody => 'Thanks for playing. Try again for three stars on every stage?';
+  String get allClearBody => 'Thanks for your hard work. Come back to collect every par stamp.';
 
   @override
-  String get ruleShort => 'Walk over a dish to stack it on your head (you always pick it up). Bump into a guest to hand over the top dish — only if it is what they ordered. Serve everyone to clear.';
+  String get ruleShort => 'Walk over a dish to stack it on your head (you always pick it up). Bump into a guest to hand over the top dish — only if it is what they ordered. Serve everyone to finish.';
   @override
   List<(String, String)> get howToPages => const [
-        ('Pick up', 'Walking over a dish stacks it on your head. You always pick it up, so your route matters. You can only carry so many dishes.'),
-        ('Serve in order', 'Bump into a guest to hand over the dish on top. It has to be the one in their speech bubble. The last dish you picked up is on top.'),
-        ('Serve everyone', 'Clear the stage by serving every guest. Leftover dishes are fine. Clear within par for three stars.'),
-        ('Stuck?', 'Undo as often as you like. The Hint button shows the next move, and you\'ll be told when a stage can no longer be finished.'),
+        ('Pick up', 'Walk over a dish and it goes on top of your stack. You always pick it up, so choose your route well. You can only carry so many plates.'),
+        ('Serve in order', 'Bump into a guest to hand over the dish on top. It has to be the one on their ticket. The last dish you picked up is on top.'),
+        ('Serve everyone', 'Serve every guest to finish. Leftover dishes are fine. Deliver within par to earn all three stamps.'),
+        ('Stuck?', 'Undo as often as you like. Tap Hint and I\'ll leave paw prints on the way to go.'),
       ];
   @override
   String gimmickName(String id) => switch (id) {
         'counter' => 'Return counter',
         'tray' => 'Flip tray',
-        'oneWay' => 'One-way floor',
+        'oneWay' => 'One-way lane',
         _ => '',
       };
   @override
   String gimmickDesc(String id) => switch (id) {
-        'counter' => 'Bump into it to hand back your top dish. Works only once.',
-        'tray' => 'Step on it to turn your stack upside down.',
-        'oneWay' => 'You can only enter it moving the way the arrows point.',
+        'counter' => 'Bump it to hand back your top dish. It works once, then the shutter comes down.',
+        'tray' => 'Step on it and your whole stack turns upside down.',
+        'oneWay' => 'You can only enter it going the way the arrows point. Mind the way back.',
         _ => '',
       };
   @override
-  String get newGimmick => 'New gimmick';
+  String get newGimmick => 'Notice';
   @override
   String get gotIt => 'Got it';
+  @override
+  String get nextPage => 'Next';
   @override
   String dishName(String c) => switch (c) { 'a' => 'Tomato', 'b' => 'Matcha dango', 'c' => 'Omelette', _ => 'Grapes' };
 
@@ -397,13 +414,13 @@ class StringsEn extends Strings {
   @override
   String get languageSystem => 'System';
   @override
-  String get theme => 'Appearance';
+  String get theme => 'Opening hours';
   @override
   String get themeSystem => 'System';
   @override
-  String get themeLight => 'Light';
+  String get themeLight => 'Day';
   @override
-  String get themeDark => 'Dark';
+  String get themeDark => 'Night';
   @override
   String get reduceMotion => 'Reduce motion';
   @override
@@ -411,7 +428,7 @@ class StringsEn extends Strings {
   @override
   String get resetProgress => 'Erase progress';
   @override
-  String get resetConfirm => 'This erases every cleared stage and best score. It cannot be undone.';
+  String get resetConfirm => 'This erases every delivery record and stamp. It cannot be undone.';
   @override
   String get resetDone => 'Progress erased';
   @override

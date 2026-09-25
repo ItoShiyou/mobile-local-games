@@ -13,6 +13,8 @@ Future<void> main() async {
   LicenseRegistry.addLicense(() async* {
     final ofl = await rootBundle.loadString('assets/fonts/OFL.txt');
     yield LicenseEntryWithLineBreaks(['Zen Maru Gothic'], ofl);
+    final yusei = await rootBundle.loadString('assets/fonts/OFL-YuseiMagic.txt');
+    yield LicenseEntryWithLineBreaks(['Yusei Magic'], yusei);
   });
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final prefs = await SharedPreferences.getInstance();

@@ -8,14 +8,16 @@ import '../game/engine.dart';
 import '../game/level_model.dart';
 import '../game/solver.dart';
 import 'board_view.dart';
+import 'scene.dart';
 
 /// A non-interactive board that plays a stage's shortest solution on a loop.
 class AutoPlayBoard extends StatefulWidget {
-  const AutoPlayBoard({super.key, required this.map, this.cap = 2, this.stepMs = 520, this.maxCell = 56});
+  const AutoPlayBoard({super.key, required this.map, this.cap = 2, this.stepMs = 520, this.maxCell = 56, this.scene = 'basic'});
   final List<String> map;
   final int cap;
   final int stepMs;
   final double maxCell;
+  final String scene;
 
   @override
   State<AutoPlayBoard> createState() => _AutoPlayBoardState();
@@ -78,7 +80,7 @@ class _AutoPlayBoardState extends State<AutoPlayBoard> {
     final reduce = AppScope.of(context).settings.reduceMotion(context);
     return ExcludeSemantics(
       child: IgnorePointer(
-        child: BoardView(controller: _c, reduceMotion: reduce, maxCell: widget.maxCell),
+        child: BoardView(controller: _c, scene: sceneFor(widget.scene), reduceMotion: reduce, maxCell: widget.maxCell),
       ),
     );
   }

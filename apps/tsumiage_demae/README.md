@@ -6,7 +6,8 @@
 
 - 全46ステージ（5章）。しかけは返却口・くるりトレイ・一方通行
 - 無制限の「1手戻す／1手進む」、最短解にもとづくヒント、詰みのお知らせ
-- 目標手数と★、面ごとの最少手数の記録、続きから再開
+- 目標手数と判子（最大3つ）、面ごとの最少手数の記録、続きから再開
+- 商店街のねこの出前屋という世界観：章ごとに舞台（食堂・定食屋・喫茶店・路地裏・夏祭り）、手描きの線と和紙の質感、夜営業のダークモード
 - 日本語・英語、ライト・ダーク、アニメーションを減らす設定、読み上げ対応
 - 効果音・BGM・アイコンはすべてこのリポジトリ内で生成（外部素材なし）
 - 通信・広告なし
@@ -35,7 +36,7 @@ flutter test
 ```
 lib/
   game/     ルール（engine）、幅優先探索（solver）、ステージ（levels）、プレイ状態（controller）
-  ui/       画面と盤面の描画（board_painter, art）
+  ui/       画面と盤面の描画（board_painter, art, scene）、世界観の部品（widgets, paper, ink_icons）
   app/      テーマ、文言（日英）、設定、進行データ
   audio/    効果音と BGM
 tool/
@@ -49,4 +50,4 @@ tool/
 
 ## ライセンス
 
-フォント Zen Maru Gothic は SIL Open Font License 1.1（`assets/fonts/OFL.txt`）。アプリ内の「設定 → ライセンス」にも表示されます。
+フォント Zen Maru Gothic と Yusei Magic は SIL Open Font License 1.1（`assets/fonts/OFL*.txt`）。アプリ内の「設定 → ライセンス」にも表示されます。

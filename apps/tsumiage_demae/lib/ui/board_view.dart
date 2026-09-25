@@ -7,6 +7,11 @@ import '../app/theme.dart';
 import '../game/controller.dart';
 import '../game/engine.dart';
 import 'board_painter.dart';
+import 'scene.dart';
+
+/// Cell size for a board that must fit in [box].
+double cellSizeFor(Board b, Size box, double maxCell) =>
+    math.min(math.min(box.width / b.width, box.height / b.height), maxCell).floorToDouble();
 
 /// Animated board for a [GameController]. Handles swipes (one move per
 /// ~0.7 cell of drag, so a long drag walks several cells) and taps on a
@@ -15,6 +20,7 @@ class BoardView extends StatefulWidget {
   const BoardView({
     super.key,
     required this.controller,
+    required this.scene,
     required this.reduceMotion,
     this.onMove,
     this.maxCell = 76,
@@ -22,6 +28,7 @@ class BoardView extends StatefulWidget {
   });
 
   final GameController controller;
+  final Scene scene;
   final bool reduceMotion;
   final void Function(Dir)? onMove;
   final double maxCell;
@@ -40,6 +47,7 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
   int _bumpSerial = -1;
   double _bumpStart = -10;
   Offset? _dragOrigin;
+  SceneLayers? _layers;
 
   @override
   void initState() {
@@ -88,7 +96,19 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
     widget.controller.removeListener(_onChange);
     _ticker.dispose();
     _clock.dispose();
+    _layers?.dispose();
     super.dispose();
+  }
+
+  SceneLayers layersFor(double u, Palette pal) {
+    final b = widget.controller.board;
+    final night = pal.night || widget.scene.alwaysNight;
+    final key = SceneLayers.keyFor(b, u, widget.scene, night);
+    if (_layers?.key != key) {
+      _layers?.dispose();
+      _layers = SceneLayers.build(b, u, widget.scene, pal, night);
+    }
+    return _layers!;
   }
 
   @override
@@ -97,7 +117,7 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
     final board = c.board;
     final pal = context.palette;
     return LayoutBuilder(builder: (context, box) {
-      final u = math.min(math.min(box.maxWidth / board.width, box.maxHeight / board.height), widget.maxCell).floorToDouble();
+      final u = cellSizeFor(board, box.biggest, widget.maxCell);
       final size = Size(u * board.width, u * board.height);
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -133,9 +153,9 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
             label: widget.semanticLabel,
             liveRegion: true,
             child: RepaintBoundary(
-              child: CustomPaint(
-                size: size,
-                painter: _AnimatedBoardPainter(this, pal),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(u * .12),
+                child: CustomPaint(size: size, painter: _AnimatedBoardPainter(this, pal, u)),
               ),
             ),
           ),
@@ -148,22 +168,24 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
     final c = widget.controller;
     final motion = !widget.reduceMotion;
     final tr = c.transition;
-    double trP = 1;
+    double trP = 1, trAge = 99;
     if (motion && tr != null && tr.serial == _trSerial) {
-      final dur = transitionDuration(tr).inMicroseconds / 1e6;
-      trP = ((_now - _trStart) / dur).clamp(0.0, 1.0);
+      trAge = _now - _trStart;
+      trP = (trAge / (transitionDuration(tr).inMicroseconds / 1e6)).clamp(0.0, 1.0);
     }
-    double bumpP = 1;
-    if (motion && c.bump != null && c.bump!.serial == _bumpSerial) {
-      bumpP = ((_now - _bumpStart) / .22).clamp(0.0, 1.0);
+    double bumpAge = 99;
+    if (c.bump != null && c.bump!.serial == _bumpSerial) {
+      bumpAge = motion ? _now - _bumpStart : .3;
     }
     return BoardFrame(
       state: c.state,
       palette: pal,
+      scene: widget.scene,
       transition: tr,
       transitionP: trP,
+      transitionAge: trAge,
       bump: c.bump,
-      bumpP: bumpP,
+      bumpAge: bumpAge,
       hint: c.hint,
       time: motion ? _now : 0,
     );
@@ -171,19 +193,20 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
 }
 
 class _AnimatedBoardPainter extends CustomPainter {
-  _AnimatedBoardPainter(this.view, this.pal) : super(repaint: view._clock);
+  _AnimatedBoardPainter(this.view, this.pal, this.u) : super(repaint: view._clock);
   final _BoardViewState view;
   final Palette pal;
+  final double u;
 
   @override
   void paint(Canvas canvas, Size size) {
     final f = view.frame(pal);
     final b = f.bump;
     if (b != null && f.bumpP < 1 && (b.reason == Blocked.wall || b.reason == Blocked.oneWay)) {
-      // spec §3-4: a refused move shakes the board 4px sideways
+      // a refused move shakes the board a little
       canvas.translate(math.sin(f.bumpP * math.pi * 4) * 4 * (1 - f.bumpP), 0);
     }
-    BoardPainter(f).paint(canvas, size);
+    BoardPainter(f, view.layersFor(u, pal)).paint(canvas, size);
   }
 
   @override

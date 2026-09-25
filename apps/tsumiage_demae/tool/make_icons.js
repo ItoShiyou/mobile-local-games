@@ -15,51 +15,68 @@ function draw(s, mode) {
   const x = c.getContext('2d');
   if (mode !== 'fg') {
     const g = x.createLinearGradient(0, 0, 0, s);
-    g.addColorStop(0, '#C98A5A'); g.addColorStop(1, '#A96B3E');
+    g.addColorStop(0, '#F3EAD8'); g.addColorStop(1, '#E3D1B2');
     x.fillStyle = g; x.fillRect(0, 0, s, s);
-    x.fillStyle = 'rgba(255,255,255,.07)';
-    for (let i = 0; i < 6; i++) x.fillRect(0, s * (i / 6 + .08), s, s * .012);
+    if (mode === 'full') {
+      x.fillStyle = '#2F4B6B'; x.fillRect(0, 0, s, s * .16);
+      x.fillStyle = '#F3EAD8'; for (let i = 1; i < 4; i++) x.fillRect(s * i / 4 - s * .006, s * .02, s * .012, s * .14);
+    }
   }
   const k = mode === 'full' ? 1 : .72;
   x.translate(s / 2, s / 2); x.scale(s * k / 1024, s * k / 1024); x.translate(-512, -512);
+  const INK = '#3A2B22';
+  const stroke = (w) => { x.lineWidth = w; x.strokeStyle = INK; x.lineJoin = 'round'; x.lineCap = 'round'; x.stroke(); };
   // shadow
-  x.fillStyle = 'rgba(0,0,0,.16)'; x.beginPath(); x.ellipse(512, 905, 250, 42, 0, 0, 7); x.fill();
-  // body (headband colour apron)
-  x.fillStyle = '#7A4A26'; x.beginPath(); x.roundRect(352, 760, 320, 150, 70); x.fill();
+  x.fillStyle = 'rgba(40,20,10,.22)'; x.beginPath(); x.ellipse(512, 915, 250, 42, 0, 0, 7); x.fill();
+  // body in an indigo happi coat
+  x.beginPath(); x.moveTo(330, 910); x.quadraticCurveTo(318, 770, 420, 760); x.lineTo(604, 760); x.quadraticCurveTo(706, 770, 694, 910); x.closePath();
+  x.fillStyle = '#2F4B6B'; x.fill(); stroke(14);
+  x.strokeStyle = '#F6EEDF'; x.lineWidth = 26; x.beginPath(); x.moveTo(440, 775); x.lineTo(512, 900); x.lineTo(584, 775); x.stroke();
   // ears
-  const fur = '#F4F1EC', edge = '#C9C2B6';
+  const fur = '#FBF4E8';
   for (const sx of [-1, 1]) {
-    x.beginPath(); x.moveTo(512 + sx * 150, 600); x.lineTo(512 + sx * 120, 440); x.lineTo(512 + sx * 40, 520); x.closePath();
-    x.fillStyle = fur; x.fill(); x.lineWidth = 10; x.strokeStyle = edge; x.stroke();
-    x.beginPath(); x.moveTo(512 + sx * 128, 575); x.lineTo(512 + sx * 112, 480); x.lineTo(512 + sx * 66, 525); x.closePath();
-    x.fillStyle = '#F2B8C6'; x.fill();
+    x.beginPath(); x.moveTo(512 + sx * 170, 600); x.lineTo(512 + sx * 150, 425); x.lineTo(512 + sx * 50, 505); x.closePath();
+    x.fillStyle = fur; x.fill(); stroke(14);
+    x.beginPath(); x.moveTo(512 + sx * 145, 570); x.lineTo(512 + sx * 138, 470); x.lineTo(512 + sx * 80, 520); x.closePath();
+    x.fillStyle = '#F2B3BE'; x.fill();
   }
-  // head
-  x.beginPath(); x.arc(512, 650, 185, 0, 7); x.fillStyle = fur; x.fill(); x.lineWidth = 12; x.strokeStyle = edge; x.stroke();
-  x.beginPath(); x.arc(512, 650, 185, Math.PI * 1.12, Math.PI * 1.88); x.lineWidth = 46; x.strokeStyle = '#7A4A26'; x.stroke();
+  // head with a brown patch
+  x.save(); x.beginPath(); x.ellipse(512, 640, 200, 178, 0, 0, 7); x.fillStyle = fur; x.fill(); x.clip();
+  x.fillStyle = '#D9A066'; x.beginPath(); x.ellipse(400, 560, 115, 95, 0, 0, 7); x.fill(); x.restore();
+  x.beginPath(); x.ellipse(512, 640, 200, 178, 0, 0, 7); stroke(16);
+  // hachimaki
+  x.beginPath(); x.moveTo(314, 612); x.quadraticCurveTo(512, 552, 710, 612); x.lineTo(706, 648); x.quadraticCurveTo(512, 590, 318, 648); x.closePath();
+  x.fillStyle = '#C8452F'; x.fill(); stroke(10);
+  for (const [dx, dy] of [[-80, -40], [-90, 30]]) { x.beginPath(); x.moveTo(318, 625); x.lineTo(318 + dx, 625 + dy - 18); x.lineTo(318 + dx + 10, 625 + dy + 18); x.closePath(); x.fillStyle = '#C8452F'; x.fill(); stroke(9); }
+  // eyes, nose, mouth, cheeks, whiskers
   for (const sx of [-1, 1]) {
-    x.fillStyle = '#26303F'; x.beginPath(); x.arc(512 + sx * 68, 665, 32, 0, 7); x.fill();
-    x.fillStyle = '#fff'; x.beginPath(); x.arc(512 + sx * 68 + 10, 655, 11, 0, 7); x.fill();
-    x.fillStyle = 'rgba(229,138,154,.45)'; x.beginPath(); x.arc(512 + sx * 118, 715, 26, 0, 7); x.fill();
+    x.fillStyle = INK; x.beginPath(); x.ellipse(512 + sx * 72, 670, 26, 34, 0, 0, 7); x.fill();
+    x.fillStyle = '#fff'; x.beginPath(); x.arc(512 + sx * 72 + 9, 656, 10, 0, 7); x.fill();
+    x.fillStyle = 'rgba(240,138,154,.5)'; x.beginPath(); x.arc(512 + sx * 125, 720, 24, 0, 7); x.fill();
+    x.strokeStyle = INK; x.lineWidth = 6; x.beginPath(); x.moveTo(512 + sx * 145, 700); x.lineTo(512 + sx * 235, 685); x.stroke();
+    x.beginPath(); x.moveTo(512 + sx * 145, 725); x.lineTo(512 + sx * 235, 735); x.stroke();
   }
-  x.fillStyle = '#E58A9A'; x.beginPath(); x.arc(512, 722, 20, 0, 7); x.fill();
+  x.fillStyle = '#E07A8C'; x.beginPath(); x.arc(512, 712, 15, 0, 7); x.fill();
+  x.strokeStyle = INK; x.lineWidth = 8; x.beginPath(); x.arc(494, 728, 18, .3, Math.PI - .3); x.stroke(); x.beginPath(); x.arc(530, 728, 18, .3, Math.PI - .3); x.stroke();
   // stacked dishes
-  const dishes = [['#E9B93A', 'egg'], ['#4FA86A', 'dango'], ['#E0646A', 'tomato']];
+  const dishes = [['#F0C13F', 'egg'], ['#6FA64E', 'dango'], ['#E0564A', 'tomato']];
   dishes.forEach(([col, kind], i) => {
-    const y = 420 - i * 118;
-    x.fillStyle = 'rgba(0,0,0,.18)'; x.beginPath(); x.ellipse(512, y + 14, 210, 44, 0, 0, 7); x.fill();
-    x.fillStyle = '#fff'; x.beginPath(); x.ellipse(512, y, 210, 46, 0, 0, 7); x.fill();
-    x.lineWidth = 6; x.strokeStyle = '#D5D9E0'; x.stroke();
-    x.fillStyle = col;
-    if (kind === 'egg') { x.beginPath(); x.roundRect(422, y - 92, 180, 84, 22); x.fill();
-      x.strokeStyle = '#C9921C'; x.lineWidth = 9; for (const dx of [-30, 30]) { x.beginPath(); x.moveTo(512 + dx, y - 86); x.lineTo(512 + dx, y - 14); x.stroke(); } }
-    if (kind === 'dango') { x.strokeStyle = '#B88A55'; x.lineWidth = 12; x.beginPath(); x.moveTo(420, y - 18); x.lineTo(604, y - 18); x.stroke();
-      for (const dx of [-60, 0, 60]) { x.fillStyle = col; x.beginPath(); x.arc(512 + dx, y - 50, 38, 0, 7); x.fill();
-        x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.arc(500 + dx, y - 62, 11, 0, 7); x.fill(); } }
-    if (kind === 'tomato') { x.beginPath(); x.arc(512, y - 58, 62, 0, 7); x.fill();
-      x.fillStyle = 'rgba(255,255,255,.4)'; x.beginPath(); x.arc(490, y - 80, 15, 0, 7); x.fill();
-      x.strokeStyle = '#3F8A4E'; x.lineWidth = 14; x.lineCap = 'round';
-      for (let a = 0; a < 5; a++) { const t = -Math.PI / 2 + a * 2 * Math.PI / 5; x.beginPath(); x.moveTo(512, y - 116); x.lineTo(512 + Math.cos(t) * 34, y - 116 + Math.sin(t) * 18); x.stroke(); } }
+    const y = 425 - i * 115;
+    if (kind === 'egg') { x.beginPath(); x.roundRect(430, y - 88, 164, 80, 22); x.fillStyle = col; x.fill(); stroke(10);
+      x.strokeStyle = '#C98E1E'; x.lineWidth = 9; for (const dx of [-28, 28]) { x.beginPath(); x.moveTo(512 + dx, y - 82); x.lineTo(512 + dx, y - 16); x.stroke(); } }
+    if (kind === 'dango') { x.strokeStyle = INK; x.lineWidth = 22; x.beginPath(); x.moveTo(420, y - 20); x.lineTo(604, y - 20); x.stroke();
+      x.strokeStyle = '#D8B27A'; x.lineWidth = 10; x.beginPath(); x.moveTo(420, y - 20); x.lineTo(604, y - 20); x.stroke();
+      for (const dx of [-60, 0, 60]) { x.fillStyle = dx === 0 ? '#86B85F' : col; x.beginPath(); x.arc(512 + dx, y - 50, 36, 0, 7); x.fill(); stroke(9);
+        x.fillStyle = 'rgba(255,255,255,.45)'; x.beginPath(); x.arc(500 + dx, y - 62, 10, 0, 7); x.fill(); } }
+    if (kind === 'tomato') { x.beginPath(); x.arc(512, y - 58, 60, 0, 7); x.fillStyle = col; x.fill(); stroke(10);
+      x.fillStyle = 'rgba(255,255,255,.5)'; x.beginPath(); x.ellipse(488, y - 78, 16, 10, 0, 0, 7); x.fill();
+      x.fillStyle = '#4E8A3E'; x.beginPath();
+      for (let a = 0; a < 5; a++) { const t = -Math.PI / 2 + a * 2 * Math.PI / 5; x.moveTo(512, y - 112); x.lineTo(512 + Math.cos(t - .4) * 12, y - 112 + Math.sin(t - .4) * 8); x.lineTo(512 + Math.cos(t) * 40, y - 112 + Math.sin(t) * 20); x.lineTo(512 + Math.cos(t + .4) * 12, y - 112 + Math.sin(t + .4) * 8); }
+      x.fill(); stroke(6); }
+    // plate (side view) in front of the food
+    x.beginPath(); x.moveTo(300, y - 6); x.quadraticCurveTo(512, y + 26, 724, y - 6); x.lineTo(650, y + 40); x.lineTo(374, y + 40); x.closePath();
+    x.fillStyle = '#FFFCF4'; x.fill(); stroke(10);
+    x.strokeStyle = '#4A6F9E'; x.lineWidth = 7; x.beginPath(); x.moveTo(330, y + 8); x.quadraticCurveTo(512, y + 34, 694, y + 8); x.stroke();
   });
   if (mode === 'mono') {}
   return c.toDataURL('image/png');

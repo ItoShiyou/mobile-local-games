@@ -5,242 +5,484 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../game/engine.dart';
 
-/// Shared vector art for the board, the HUD and the menus.
-/// Every dish has its own silhouette, so colour is never the only cue.
+/// Sumi-brown ink used for every outline on the board.
+const kInk = Color(0xFF3A2B22);
+
+enum Mood { waiting, upset, happy }
+
+/// Picture-book sprites. Everything is drawn with a warm ink outline so the
+/// board reads as one illustration rather than a set of flat shapes.
 class Art {
-  static final _fill = Paint()..isAntiAlias = true;
-  static final _stroke = Paint()
+  // A fresh Paint per call: some renderers keep a reference to the Paint
+  // rather than copying it, so a shared, mutated Paint would change colours
+  // that were already drawn.
+  static Paint fill(Color c) => Paint()
+    ..isAntiAlias = true
+    ..color = c;
+  static Paint stroke(Color c, double w) => Paint()
     ..isAntiAlias = true
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round;
-
-  static Paint fill(Color c) => _fill..color = c;
-  static Paint stroke(Color c, double w) => _stroke
+    ..strokeJoin = StrokeJoin.round
     ..color = c
     ..strokeWidth = w;
 
   static RRect rr(double x, double y, double w, double h, double r) =>
       RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r));
 
+  /// Fill then outline.
+  static void inked(Canvas c, Path p, Color color, double w) {
+    c.drawPath(p, fill(color));
+    c.drawPath(p, stroke(kInk, w));
+  }
+
+  static void shadow(Canvas c, Offset center, double w, double h, [double a = .22]) {
+    c.drawOval(Rect.fromCenter(center: center, width: w, height: h), fill(Color.fromRGBO(40, 25, 15, a)));
+  }
+
+  // ---------------------------------------------------------------- food
+
   /// Food only (no plate), centred at [c], roughly [s] wide.
   static void food(Canvas canvas, Offset c, double s, String kind) {
+    final w = math.max(1.0, s * .05);
     final col = dishColors[kind]!;
     switch (kind) {
       case 'a': // tomato
-        canvas.drawCircle(c, s * .42, fill(col));
-        canvas.drawCircle(c + Offset(-s * .14, -s * .12), s * .1, fill(Colors.white.withValues(alpha: .45)));
-        final leaf = Path();
+        inked(canvas, Path()..addOval(Rect.fromCircle(center: c + Offset(0, s * .04), radius: s * .38)), col, w);
+        canvas.drawOval(Rect.fromCenter(center: c + Offset(-s * .15, -s * .06), width: s * .16, height: s * .1),
+            fill(Colors.white.withValues(alpha: .55)));
+        final calyx = Path();
         for (var i = 0; i < 5; i++) {
           final a = -math.pi / 2 + i * 2 * math.pi / 5;
-          final p = c + Offset(0, -s * .34) + Offset(math.cos(a), math.sin(a) * .6) * s * .2;
-          if (i == 0) {
-            leaf.moveTo(c.dx, c.dy - s * .34);
-          }
-          leaf.lineTo(p.dx, p.dy);
-          leaf.lineTo(c.dx, c.dy - s * .34);
+          final tip = c + Offset(math.cos(a) * s * .2, -s * .3 + math.sin(a) * s * .1);
+          final l = c + Offset(math.cos(a - .5) * s * .06, -s * .3 + math.sin(a - .5) * s * .04);
+          final r = c + Offset(math.cos(a + .5) * s * .06, -s * .3 + math.sin(a + .5) * s * .04);
+          calyx
+            ..moveTo(l.dx, l.dy)
+            ..lineTo(tip.dx, tip.dy)
+            ..lineTo(r.dx, r.dy);
         }
-        canvas.drawPath(leaf, stroke(const Color(0xFF3F8A4E), s * .09));
-      case 'b': // matcha dango: three balls on a skewer
-        canvas.drawLine(c + Offset(-s * .44, s * .34), c + Offset(s * .44, -s * .34), stroke(const Color(0xFFB88A55), s * .07));
+        calyx.close();
+        inked(canvas, calyx, const Color(0xFF4E8A3E), w * .8);
+        canvas.drawLine(c + Offset(0, -s * .32), c + Offset(s * .04, -s * .44), stroke(kInk, w));
+      case 'b': // matcha dango on a skewer
+        canvas.drawLine(c + Offset(-s * .46, s * .3), c + Offset(s * .46, -s * .3), stroke(kInk, w * 2.4));
+        canvas.drawLine(c + Offset(-s * .46, s * .3), c + Offset(s * .46, -s * .3), stroke(const Color(0xFFD8B27A), w * 1.2));
         for (var i = -1; i <= 1; i++) {
-          final p = c + Offset(i * s * .26, -i * s * .2);
-          canvas.drawCircle(p, s * .19, fill(col));
-          canvas.drawCircle(p + Offset(-s * .06, -s * .06), s * .05, fill(Colors.white.withValues(alpha: .4)));
+          final p = c + Offset(i * s * .25, -i * s * .165);
+          inked(canvas, Path()..addOval(Rect.fromCircle(center: p, radius: s * .17)), i == 0 ? const Color(0xFF86B85F) : col, w);
+          canvas.drawCircle(p + Offset(-s * .055, -s * .06), s * .045, fill(Colors.white.withValues(alpha: .5)));
         }
-      case 'c': // tamagoyaki: a rolled omelette block
-        final r = rr(c.dx - s * .42, c.dy - s * .26, s * .84, s * .52, s * .12);
-        canvas.drawRRect(r, fill(col));
+      case 'c': // tamagoyaki
+        final body = Path()..addRRect(rr(c.dx - s * .42, c.dy - s * .24, s * .84, s * .5, s * .14));
+        inked(canvas, body, col, w);
+        canvas.drawRRect(rr(c.dx - s * .42, c.dy + s * .08, s * .84, s * .18, s * .1), fill(const Color(0x33B8741A)));
         for (final dx in [-.14, .14]) {
-          canvas.drawLine(c + Offset(s * dx, -s * .22), c + Offset(s * dx, s * .22), stroke(const Color(0xFFC9921C), s * .05));
+          canvas.drawLine(c + Offset(s * dx, -s * .2), c + Offset(s * dx, s * .22), stroke(const Color(0xFFC98E1E), w));
         }
-        canvas.drawLine(c + Offset(-s * .34, -s * .16), c + Offset(-s * .24, -s * .16), stroke(Colors.white.withValues(alpha: .5), s * .05));
+        canvas.drawLine(c + Offset(-s * .32, -s * .13), c + Offset(-s * .22, -s * .13), stroke(Colors.white.withValues(alpha: .7), w));
       default: // grapes
-        const pts = [(-.18, -.18), (0.0, -.2), (.18, -.18), (-.1, 0.0), (.1, 0.0), (0.0, .18)];
+        canvas.drawLine(c + Offset(0, -s * .28), c + Offset(s * .06, -s * .44), stroke(kInk, w * 1.3));
+        final leaf = Path()..addOval(Rect.fromCenter(center: c + Offset(s * .2, -s * .38), width: s * .26, height: s * .13));
+        inked(canvas, leaf, const Color(0xFF6FA64E), w * .8);
+        const pts = [(-.18, -.16), (0.0, -.2), (.18, -.16), (-.1, .02), (.1, .02), (0.0, .2)];
         for (final (x, y) in pts) {
-          canvas.drawCircle(c + Offset(x * s, y * s + s * .06), s * .13, fill(col));
-          canvas.drawCircle(c + Offset(x * s - s * .04, y * s + s * .02), s * .035, fill(Colors.white.withValues(alpha: .45)));
+          inked(canvas, Path()..addOval(Rect.fromCircle(center: c + Offset(x * s, y * s + s * .06), radius: s * .13)), col, w * .8);
+          canvas.drawCircle(c + Offset(x * s - s * .04, y * s + s * .02), s * .035, fill(Colors.white.withValues(alpha: .5)));
         }
-        canvas.drawLine(c + Offset(0, -s * .3), c + Offset(s * .06, -s * .44), stroke(const Color(0xFF8A6A45), s * .06));
-        canvas.drawOval(Rect.fromCenter(center: c + Offset(s * .18, -s * .38), width: s * .24, height: s * .12), fill(const Color(0xFF4FA86A)));
     }
   }
 
-  /// A dish lying on the floor (top-down view).
+  /// A dish lying on the floor (seen from above).
   static void floorDish(Canvas canvas, Offset c, double u, String kind) {
-    canvas.drawOval(Rect.fromCenter(center: c + Offset(0, u * .08), width: u * .7, height: u * .44), fill(const Color(0x22000000)));
-    canvas.drawOval(Rect.fromCenter(center: c + Offset(0, u * .04), width: u * .7, height: u * .46), fill(Colors.white));
-    canvas.drawOval(Rect.fromCenter(center: c + Offset(0, u * .04), width: u * .7, height: u * .46), stroke(const Color(0xFFD5D9E0), 1.5));
-    canvas.drawOval(Rect.fromCenter(center: c + Offset(0, u * .04), width: u * .5, height: u * .3), stroke(const Color(0xFFE8EBF0), 1.2));
-    food(canvas, c + Offset(0, -u * .01), u * .44, kind);
+    final w = u * .03;
+    shadow(canvas, c + Offset(0, u * .12), u * .72, u * .38);
+    final plate = Rect.fromCenter(center: c + Offset(0, u * .06), width: u * .72, height: u * .46);
+    inked(canvas, Path()..addOval(plate), const Color(0xFFFFFCF4), w);
+    canvas.drawOval(plate.deflate(u * .07), stroke(const Color(0xFFE2D8C4), w));
+    canvas.drawArc(plate.deflate(u * .03), math.pi * 1.1, .9, false, stroke(const Color(0xFF4A6F9E), w * .9));
+    food(canvas, c + Offset(0, -u * .01), u * .46, kind);
   }
 
-  /// A dish on the stack (side view): thin plate with the food on it.
+  /// A dish on the stack (side view): a plate rim with the food on it.
   static void stackDish(Canvas canvas, Offset c, double u, String kind, {bool highlight = false}) {
-    final plate = Rect.fromCenter(center: c, width: u * .56, height: u * .14);
-    canvas.drawOval(plate.shift(Offset(0, u * .02)), fill(const Color(0x33000000)));
-    canvas.drawOval(plate, fill(Colors.white));
-    canvas.drawOval(plate, stroke(highlight ? const Color(0xFF26303F) : const Color(0xFFC9CED6), highlight ? 1.6 : 1));
-    food(canvas, c + Offset(0, -u * .07), u * .24, kind);
+    final w = u * .028;
+    final plate = Path()
+      ..moveTo(c.dx - u * .3, c.dy - u * .02)
+      ..quadraticBezierTo(c.dx, c.dy + u * .04, c.dx + u * .3, c.dy - u * .02)
+      ..lineTo(c.dx + u * .2, c.dy + u * .07)
+      ..lineTo(c.dx - u * .2, c.dy + u * .07)
+      ..close();
+    food(canvas, c + Offset(0, -u * .08), u * .27, kind);
+    inked(canvas, plate, const Color(0xFFFFFCF4), w);
+    canvas.drawLine(c + Offset(-u * .22, u * .005), c + Offset(u * .22, u * .005), stroke(const Color(0xFF4A6F9E), w * .8));
+    if (highlight) {
+      canvas.drawCircle(c + Offset(u * .3, -u * .1), u * .045, fill(const Color(0xFFFFC56B)));
+    }
   }
 
-  /// Delivery cat seen from the front. [look] is the facing direction.
-  static void courier(Canvas canvas, Offset c, double u, Dir look, Color band, {double squash = 0}) {
-    final body = Rect.fromCenter(center: c + Offset(0, u * .22), width: u * .5, height: u * .26);
-    canvas.drawRRect(RRect.fromRectAndRadius(body, Radius.circular(u * .12)), fill(band));
-    canvas.save();
-    canvas.translate(c.dx, c.dy);
-    canvas.scale(1 + squash * .06, 1 - squash * .06);
-    const fur = Color(0xFFF4F1EC);
-    const edge = Color(0xFFC9C2B6);
+  // ------------------------------------------------------------ courier
+
+  /// The delivery cat. [c] is the centre of the head. [phase] is the time
+  /// in seconds for blinking and the tail.
+  static void courier(Canvas canvas, Offset c, double u, Dir look, Palette pal, {double phase = 0, double hop = 0}) {
+    final w = u * .032;
+    final head = c + Offset(0, -hop);
+    shadow(canvas, c + Offset(0, u * .36), u * .52 - hop * .6, u * .16);
+    // tail
+    final side = look == Dir.left ? 1.0 : -1.0;
+    final sway = math.sin(phase * 3.2) * u * .05;
+    final tail = Path()
+      ..moveTo(c.dx + side * u * .16, c.dy + u * .3 - hop)
+      ..cubicTo(c.dx + side * u * .42, c.dy + u * .32 - hop, c.dx + side * u * .38 + sway, c.dy + u * .05 - hop,
+          c.dx + side * u * .3 + sway, c.dy - u * .02 - hop);
+    canvas.drawPath(tail, stroke(kInk, u * .11));
+    canvas.drawPath(tail, stroke(const Color(0xFFF6EEE0), u * .065));
+    // body in a happi coat
+    final body = Path()
+      ..moveTo(head.dx - u * .21, head.dy + u * .36)
+      ..quadraticBezierTo(head.dx - u * .24, head.dy + u * .14, head.dx - u * .12, head.dy + u * .12)
+      ..lineTo(head.dx + u * .12, head.dy + u * .12)
+      ..quadraticBezierTo(head.dx + u * .24, head.dy + u * .14, head.dx + u * .21, head.dy + u * .36)
+      ..close();
+    inked(canvas, body, pal.noren, w);
+    canvas.drawLine(head + Offset(-u * .1, u * .14), head + Offset(0, u * .33), stroke(const Color(0xFFF6EEDF), u * .05));
+    canvas.drawLine(head + Offset(u * .1, u * .14), head + Offset(0, u * .33), stroke(const Color(0xFFF6EEDF), u * .05));
+    // ears
+    const fur = Color(0xFFFBF4E8);
     for (final sx in [-1.0, 1.0]) {
       final ear = Path()
-        ..moveTo(sx * u * .22, -u * .1)
-        ..lineTo(sx * u * .17, -u * .33)
-        ..lineTo(sx * u * .05, -u * .21)
+        ..moveTo(head.dx + sx * u * .23, head.dy - u * .06)
+        ..lineTo(head.dx + sx * u * .2, head.dy - u * .31)
+        ..lineTo(head.dx + sx * u * .05, head.dy - u * .2)
         ..close();
-      canvas.drawPath(ear, fill(fur));
-      canvas.drawPath(ear, stroke(edge, 1.2));
+      inked(canvas, ear, fur, w);
+      final inner = Path()
+        ..moveTo(head.dx + sx * u * .2, head.dy - u * .1)
+        ..lineTo(head.dx + sx * u * .19, head.dy - u * .25)
+        ..lineTo(head.dx + sx * u * .1, head.dy - u * .18)
+        ..close();
+      canvas.drawPath(inner, fill(const Color(0xFFF2B3BE)));
     }
-    canvas.drawCircle(Offset.zero, u * .27, fill(fur));
-    canvas.drawCircle(Offset.zero, u * .27, stroke(edge, 1.5));
-    // headband
-    canvas.drawArc(Rect.fromCircle(center: Offset.zero, radius: u * .27), math.pi * 1.12, math.pi * .76, false, stroke(band, u * .07));
-    final lx = look.dx * u * .04, ly = look.dy * u * .03;
-    for (final sx in [-1.0, 1.0]) {
-      canvas.drawCircle(Offset(sx * u * .1 + lx, u * .0 + ly), u * .05, fill(const Color(0xFF26303F)));
-      canvas.drawCircle(Offset(sx * u * .1 + lx + u * .015, -u * .015 + ly), u * .016, fill(Colors.white));
-    }
-    canvas.drawCircle(Offset(lx, u * .09 + ly), u * .03, fill(const Color(0xFFE58A9A)));
+    // head
+    final face = Path()..addOval(Rect.fromCenter(center: head, width: u * .56, height: u * .5));
+    inked(canvas, face, fur, w);
+    // brown patch over one eye
+    canvas.save();
+    canvas.clipPath(face);
+    canvas.drawOval(Rect.fromCenter(center: head + Offset(-u * .16, -u * .12), width: u * .3, height: u * .26), fill(const Color(0xFFD9A066)));
     canvas.restore();
-  }
-
-  static const _hair = [Color(0xFF4A3B34), Color(0xFF8B5A3C), Color(0xFF2F3A55), Color(0xFFB0588F), Color(0xFF6B6B6B)];
-  static const _shirt = [Color(0xFF8B6A4E), Color(0xFF4F7FA8), Color(0xFF6E8B4E), Color(0xFFA8604F), Color(0xFF7A6FD0)];
-
-  /// Seated guest waiting at a table.
-  static void guest(Canvas canvas, Offset cell, double u, int index, {required bool happy, double bob = 0}) {
-    final cx = cell.dx + u * .5, cy = cell.dy + u * .55 + bob;
-    canvas.drawRRect(rr(cell.dx + u * .14, cell.dy + u * .6 + bob, u * .72, u * .3, u * .1), fill(_shirt[index % _shirt.length]));
-    canvas.drawCircle(Offset(cx, cy - u * .06), u * .24, fill(const Color(0xFFEBC3A2)));
-    canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy - u * .12), radius: u * .25), math.pi * 1.02, math.pi * .96, true,
-        fill(_hair[index % _hair.length]));
-    const ink = Color(0xFF3A2E28);
-    if (happy) {
-      for (final sx in [-1.0, 1.0]) {
-        canvas.drawArc(Rect.fromCircle(center: Offset(cx + sx * u * .08, cy - u * .03), radius: u * .04), math.pi * 1.1, math.pi * .8, false, stroke(ink, u * .03));
+    canvas.drawPath(face, stroke(kInk, w));
+    // hachimaki
+    final band = Path()
+      ..moveTo(head.dx - u * .27, head.dy - u * .06)
+      ..quadraticBezierTo(head.dx, head.dy - u * .14, head.dx + u * .27, head.dy - u * .06)
+      ..lineTo(head.dx + u * .26, head.dy - u * .01)
+      ..quadraticBezierTo(head.dx, head.dy - u * .09, head.dx - u * .26, head.dy - u * .01)
+      ..close();
+    inked(canvas, band, pal.shu, w * .8);
+    final knot = head + Offset(-side * u * .27, -u * .04);
+    final flutter = math.sin(phase * 5) * u * .02;
+    for (final a in [-.5, .3]) {
+      final tipOff = Offset(-side * u * .13, a * u * .2 + flutter);
+      final t = Path()
+        ..moveTo(knot.dx, knot.dy)
+        ..lineTo(knot.dx + tipOff.dx, knot.dy + tipOff.dy - u * .03)
+        ..lineTo(knot.dx + tipOff.dx * .9, knot.dy + tipOff.dy + u * .03)
+        ..close();
+      inked(canvas, t, pal.shu, w * .7);
+    }
+    // eyes
+    final lx = look.dx * u * .045, ly = look.dy * u * .03;
+    final blink = (phase % 3.7) > 3.57;
+    for (final sx in [-1.0, 1.0]) {
+      final e = head + Offset(sx * u * .1 + lx, u * .03 + ly);
+      if (blink) {
+        canvas.drawArc(Rect.fromCenter(center: e, width: u * .09, height: u * .06), .2, math.pi - .4, false, stroke(kInk, w));
+      } else {
+        canvas.drawOval(Rect.fromCenter(center: e, width: u * .075, height: u * .095), fill(kInk));
+        canvas.drawCircle(e + Offset(u * .014, -u * .018), u * .015, fill(Colors.white));
       }
-      canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy + u * .03), radius: u * .07), .2, math.pi - .4, false, stroke(ink, u * .03));
-      canvas.drawCircle(Offset(cx - u * .15, cy + u * .03), u * .035, fill(const Color(0x66E58A9A)));
-      canvas.drawCircle(Offset(cx + u * .15, cy + u * .03), u * .035, fill(const Color(0x66E58A9A)));
-    } else {
-      for (final sx in [-1.0, 1.0]) {
-        canvas.drawCircle(Offset(cx + sx * u * .08, cy - u * .04), u * .03, fill(ink));
-      }
-      canvas.drawLine(Offset(cx - u * .04, cy + u * .06), Offset(cx + u * .04, cy + u * .06), stroke(ink, u * .025));
+    }
+    // nose, mouth, whiskers, cheeks
+    final m = head + Offset(lx, u * .12 + ly);
+    canvas.drawCircle(m + Offset(0, -u * .02), u * .022, fill(const Color(0xFFE07A8C)));
+    canvas.drawArc(Rect.fromCenter(center: m + Offset(-u * .025, u * .005), width: u * .05, height: u * .04), .3, math.pi - .6, false, stroke(kInk, w * .7));
+    canvas.drawArc(Rect.fromCenter(center: m + Offset(u * .025, u * .005), width: u * .05, height: u * .04), .3, math.pi - .6, false, stroke(kInk, w * .7));
+    for (final sx in [-1.0, 1.0]) {
+      canvas.drawCircle(head + Offset(sx * u * .17, u * .09), u * .035, fill(const Color(0x55F08A9A)));
+      canvas.drawLine(head + Offset(sx * u * .2, u * .06), head + Offset(sx * u * .33, u * .03), stroke(kInk, w * .5));
+      canvas.drawLine(head + Offset(sx * u * .2, u * .1), head + Offset(sx * u * .33, u * .12), stroke(kInk, w * .5));
     }
   }
 
-  /// Order bubble above-right of a guest.
-  static void bubble(Canvas canvas, Offset center, double u, String kind, {double scale = 1, Color? ring}) {
+  // ------------------------------------------------------------- guests
+
+  static const _skin = [Color(0xFFF1CDAE), Color(0xFFEBC3A0), Color(0xFFF5D2B5), Color(0xFFE7BC98), Color(0xFFDDB08A)];
+  static const _hair = [Color(0xFFD7D2CC), Color(0xFF2E2A2A), Color(0xFF5B3A26), Color(0xFF7A4A2E), Color(0xFF3A3030)];
+  static const _clothes = [Color(0xFF8C6BAE), Color(0xFFF4F1EA), Color(0xFFE59A3A), Color(0xFF6E9C74), Color(0xFF3F5F86)];
+
+  /// A seated guest behind a little table. [o] is the cell's top-left.
+  static void guest(Canvas canvas, Offset o, double u, int index, Palette pal,
+      {required Mood mood, double phase = 0, String? servedDish, double bob = 0}) {
+    final type = index % 5;
+    final w = u * .03;
+    final cx = o.dx + u * .5;
+    final headC = Offset(cx, o.dy + u * .36 + bob);
+    // chair back
+    inked(canvas, Path()..addRRect(rr(cx - u * .3, o.dy + u * .14, u * .6, u * .5, u * .1)), pal.woodDark, w);
+    // shoulders / clothes
+    final body = Path()
+      ..moveTo(cx - u * .27, o.dy + u * .72)
+      ..quadraticBezierTo(cx - u * .28, headC.dy + u * .2, cx, headC.dy + u * .17)
+      ..quadraticBezierTo(cx + u * .28, headC.dy + u * .2, cx + u * .27, o.dy + u * .72)
+      ..close();
+    inked(canvas, body, _clothes[type], w);
+    if (type == 1) {
+      // salaryman: tie
+      final tie = Path()
+        ..moveTo(cx - u * .03, headC.dy + u * .19)
+        ..lineTo(cx + u * .03, headC.dy + u * .19)
+        ..lineTo(cx + u * .04, headC.dy + u * .33)
+        ..lineTo(cx, headC.dy + u * .37)
+        ..lineTo(cx - u * .04, headC.dy + u * .33)
+        ..close();
+      inked(canvas, tie, const Color(0xFF3F5F86), w * .7);
+    }
+    // hair behind (long hair)
+    if (type == 3) {
+      inked(canvas, Path()..addRRect(rr(headC.dx - u * .22, headC.dy - u * .12, u * .44, u * .36, u * .14)), _hair[type], w);
+    }
+    // head
+    final face = Path()..addOval(Rect.fromCenter(center: headC, width: u * .4, height: u * .38));
+    inked(canvas, face, _skin[type], w);
+    // hair on top
+    canvas.save();
+    canvas.clipPath(face);
+    switch (type) {
+      case 0: // grandma: grey hair
+        canvas.drawOval(Rect.fromCenter(center: headC + Offset(0, -u * .14), width: u * .46, height: u * .22), fill(_hair[type]));
+      case 1:
+        canvas.drawOval(Rect.fromCenter(center: headC + Offset(u * .03, -u * .15), width: u * .46, height: u * .2), fill(_hair[type]));
+      case 2: // child: cap drawn later
+        canvas.drawOval(Rect.fromCenter(center: headC + Offset(0, -u * .14), width: u * .44, height: u * .16), fill(_hair[type]));
+      case 3:
+        canvas.drawOval(Rect.fromCenter(center: headC + Offset(-u * .05, -u * .15), width: u * .5, height: u * .22), fill(_hair[type]));
+      case 4: // taisho: short crop
+        canvas.drawOval(Rect.fromCenter(center: headC + Offset(0, -u * .17), width: u * .42, height: u * .12), fill(_hair[type]));
+    }
+    canvas.restore();
+    canvas.drawPath(face, stroke(kInk, w));
+    if (type == 0) {
+      // bun
+      inked(canvas, Path()..addOval(Rect.fromCircle(center: headC + Offset(0, -u * .22), radius: u * .07)), _hair[type], w);
+    } else if (type == 2) {
+      final cap = Path()
+        ..moveTo(headC.dx - u * .2, headC.dy - u * .06)
+        ..quadraticBezierTo(headC.dx, headC.dy - u * .34, headC.dx + u * .2, headC.dy - u * .06)
+        ..lineTo(headC.dx + u * .3, headC.dy - u * .05)
+        ..lineTo(headC.dx - u * .2, headC.dy - u * .03)
+        ..close();
+      inked(canvas, cap, const Color(0xFF4A86C8), w);
+    } else if (type == 4) {
+      inked(canvas, Path()..addRRect(rr(headC.dx - u * .21, headC.dy - u * .15, u * .42, u * .06, u * .02)), const Color(0xFFF6EEDF), w * .8);
+    }
+    // face
+    final ey = headC.dy + u * .01;
+    final blink = ((phase + index * .9) % 4.3) > 4.18;
+    switch (mood) {
+      case Mood.happy:
+        for (final sx in [-1.0, 1.0]) {
+          canvas.drawArc(Rect.fromCenter(center: Offset(cx + sx * u * .075, ey + u * .01), width: u * .07, height: u * .06), math.pi * 1.1, math.pi * .8, false, stroke(kInk, w));
+          canvas.drawCircle(Offset(cx + sx * u * .12, ey + u * .06), u * .03, fill(const Color(0x66F08A8A)));
+        }
+        final mouth = Path()
+          ..moveTo(cx - u * .05, ey + u * .07)
+          ..quadraticBezierTo(cx, ey + u * .14, cx + u * .05, ey + u * .07)
+          ..close();
+        inked(canvas, mouth, const Color(0xFFC8574F), w * .7);
+      case Mood.upset:
+        for (final sx in [-1.0, 1.0]) {
+          canvas.drawCircle(Offset(cx + sx * u * .075, ey + u * .015), u * .022, fill(kInk));
+          canvas.drawLine(Offset(cx + sx * u * .04, ey - u * .045), Offset(cx + sx * u * .11, ey - u * .025), stroke(kInk, w * .8));
+        }
+        final m = Path()..moveTo(cx - u * .05, ey + u * .1);
+        for (var i = 1; i <= 4; i++) {
+          m.lineTo(cx - u * .05 + i * u * .025, ey + u * (i.isOdd ? .08 : .1));
+        }
+        canvas.drawPath(m, stroke(kInk, w * .8));
+        final drop = Path()
+          ..moveTo(cx + u * .19, ey - u * .1)
+          ..quadraticBezierTo(cx + u * .24, ey - u * .02, cx + u * .19, ey - u * .01)
+          ..quadraticBezierTo(cx + u * .15, ey - u * .02, cx + u * .19, ey - u * .1);
+        inked(canvas, drop, const Color(0xFF9FD0F0), w * .6);
+      case Mood.waiting:
+        for (final sx in [-1.0, 1.0]) {
+          final e = Offset(cx + sx * u * .075, ey + u * .015);
+          if (blink) {
+            canvas.drawLine(e - Offset(u * .025, 0), e + Offset(u * .025, 0), stroke(kInk, w));
+          } else {
+            canvas.drawCircle(e, u * .024, fill(kInk));
+          }
+        }
+        canvas.drawArc(Rect.fromCenter(center: Offset(cx, ey + u * .07), width: u * .06, height: u * .03), .2, math.pi - .4, false, stroke(kInk, w * .8));
+    }
+    if (type == 1 || type == 0) {
+      // glasses
+      for (final sx in [-1.0, 1.0]) {
+        canvas.drawCircle(Offset(cx + sx * u * .075, ey + u * .015), u * .045, stroke(kInk, w * .6));
+      }
+      canvas.drawLine(Offset(cx - u * .03, ey + u * .01), Offset(cx + u * .03, ey + u * .01), stroke(kInk, w * .6));
+    }
+    // table in front
+    final top = Path()..addRRect(rr(o.dx + u * .07, o.dy + u * .62, u * .86, u * .16, u * .06));
+    inked(canvas, top, pal.woodLight, w);
+    final front = Path()..addRRect(rr(o.dx + u * .1, o.dy + u * .76, u * .8, u * .14, u * .03));
+    inked(canvas, front, pal.wood, w);
+    // hands
+    for (final sx in [-1.0, 1.0]) {
+      inked(canvas, Path()..addOval(Rect.fromCenter(center: Offset(cx + sx * u * .2, o.dy + u * .66), width: u * .11, height: u * .08)), _skin[type], w * .7);
+    }
+    if (servedDish != null) {
+      final d = Offset(cx, o.dy + u * .69);
+      canvas.drawOval(Rect.fromCenter(center: d + Offset(0, u * .02), width: u * .4, height: u * .12), fill(const Color(0xFFFFFCF4)));
+      canvas.drawOval(Rect.fromCenter(center: d + Offset(0, u * .02), width: u * .4, height: u * .12), stroke(kInk, w * .7));
+      food(canvas, d - Offset(0, u * .03), u * .22, servedDish);
+      // chopsticks
+      canvas.drawLine(Offset(cx + u * .24, o.dy + u * .63), Offset(cx + u * .38, o.dy + u * .74), stroke(kInk, w * 1.2));
+      steam(canvas, d - Offset(0, u * .12), u * .8, phase + index);
+    }
+  }
+
+  static void steam(Canvas canvas, Offset base, double u, double t) {
+    for (var i = -1; i <= 1; i++) {
+      final k = ((t * .6 + i * .33) % 1.0);
+      final a = (1 - k) * .45;
+      final x = base.dx + i * u * .08;
+      final y = base.dy - k * u * .22;
+      final p = Path()
+        ..moveTo(x, y)
+        ..quadraticBezierTo(x + u * .04, y - u * .04, x, y - u * .08)
+        ..quadraticBezierTo(x - u * .04, y - u * .12, x, y - u * .16);
+      canvas.drawPath(p, stroke(Colors.white.withValues(alpha: a), u * .03));
+    }
+  }
+
+  /// The order ticket hanging above a guest.
+  static void orderTicket(Canvas canvas, Offset center, double u, String kind, {double scale = 1, bool upset = false, double tilt = -.08}) {
+    final w = u * .028;
     canvas.save();
     canvas.translate(center.dx, center.dy);
+    canvas.rotate(tilt);
     canvas.scale(scale);
     final tail = Path()
-      ..moveTo(-u * .1, u * .08)
-      ..lineTo(-u * .2, u * .22)
-      ..lineTo(-u * .02, u * .13)
-      ..close();
-    canvas.drawPath(tail, fill(Colors.white));
-    canvas.drawCircle(Offset.zero, u * .2, fill(Colors.white));
-    canvas.drawCircle(Offset.zero, u * .2, stroke(ring ?? dishColors[kind]!, u * .035));
-    food(canvas, Offset.zero, u * .27, kind);
+      ..moveTo(-u * .08, u * .13)
+      ..lineTo(-u * .17, u * .25)
+      ..lineTo(-u * .01, u * .15);
+    final card = Path()..addRRect(rr(-u * .2, -u * .17, u * .4, u * .32, u * .08));
+    final both = Path.combine(PathOperation.union, card, tail..close());
+    canvas.drawPath(both.shift(Offset(u * .015, u * .025)), fill(const Color(0x33000000)));
+    inked(canvas, both, const Color(0xFFFFFCF4), upset ? w * 1.6 : w);
+    if (upset) canvas.drawPath(both, stroke(const Color(0xFFC8452F), w * 1.4));
+    food(canvas, Offset(0, -u * .01), u * .26, kind);
     canvas.restore();
   }
 
-  static void check(Canvas canvas, Offset c, double u, Color color) {
-    canvas.drawCircle(c, u * .12, fill(color));
-    final p = Path()
-      ..moveTo(c.dx - u * .055, c.dy)
-      ..lineTo(c.dx - u * .01, c.dy + u * .045)
-      ..lineTo(c.dx + u * .06, c.dy - u * .045);
-    canvas.drawPath(p, stroke(Colors.white, u * .035));
+  // ------------------------------------------------------------- props
+
+  /// Lacquered tray (o-bon) lying on the floor, with the flip arrows.
+  static void tray(Canvas canvas, Offset c, double u, {double spin = 0}) {
+    final w = u * .03;
+    shadow(canvas, c + Offset(0, u * .06), u * .8, u * .5, .18);
+    final r = Rect.fromCenter(center: c, width: u * .8, height: u * .6);
+    inked(canvas, Path()..addOval(r), const Color(0xFF7A2A22), w);
+    canvas.drawOval(r.deflate(u * .06), fill(const Color(0xFF9E3A2E)));
+    canvas.drawOval(r.deflate(u * .06), stroke(const Color(0xFF5A1E18), w * .7));
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.scale(1, .72);
+    canvas.rotate(spin);
+    const gold = Color(0xFFE9C46A);
+    for (final a in [0.0, math.pi]) {
+      canvas.save();
+      canvas.rotate(a);
+      canvas.drawArc(Rect.fromCircle(center: Offset.zero, radius: u * .2), -math.pi * .85, math.pi * .7, false, stroke(gold, u * .05));
+      final tip = Offset(math.cos(-math.pi * .15), math.sin(-math.pi * .15)) * u * .2;
+      canvas.drawPath(
+          Path()
+            ..moveTo(tip.dx - u * .06, tip.dy - u * .07)
+            ..lineTo(tip.dx + u * .05, tip.dy + u * .01)
+            ..lineTo(tip.dx - u * .07, tip.dy + u * .05)
+            ..close(),
+          fill(gold));
+      canvas.restore();
+    }
+    canvas.restore();
   }
 
-  static void chevrons(Canvas canvas, Offset c, double u, Dir d, Color color, {int n = 2, double width = .08}) {
-    final p = stroke(color, u * width);
-    for (var k = 0; k < n; k++) {
-      final o = (k - (n - 1) / 2) * u * .2;
+  /// Arrows painted on the ground for a one-way floor.
+  static void paintedArrow(Canvas canvas, Offset c, double u, Dir d, {Color color = const Color(0xE6FFF8E6)}) {
+    final p = stroke(color, u * .09);
+    for (var k = 0; k < 2; k++) {
+      final o = (k - .5) * u * .22;
       final x = c.dx + d.dx * o, y = c.dy + d.dy * o;
       final path = Path()
-        ..moveTo(x - d.dx * u * .08 - d.dy * u * .14, y - d.dy * u * .08 - d.dx * u * .14)
-        ..lineTo(x + d.dx * u * .08, y + d.dy * u * .08)
-        ..lineTo(x - d.dx * u * .08 + d.dy * u * .14, y - d.dy * u * .08 + d.dx * u * .14);
+        ..moveTo(x - d.dx * u * .09 - d.dy * u * .17, y - d.dy * u * .09 - d.dx * u * .17)
+        ..lineTo(x + d.dx * u * .09, y + d.dy * u * .09)
+        ..lineTo(x - d.dx * u * .09 + d.dy * u * .17, y - d.dy * u * .09 + d.dx * u * .17);
       canvas.drawPath(path, p);
     }
   }
 
-  static void woodTile(Canvas canvas, Offset o, double u, Palette pal) {
-    canvas.drawRRect(rr(o.dx + 1.5, o.dy + 1.5, u - 3, u - 3, u * .14), fill(pal.wood));
-    canvas.drawLine(Offset(o.dx + 4, o.dy + u * .5), Offset(o.dx + u - 4, o.dy + u * .5), stroke(pal.woodLine, 1));
-  }
-
-  static void tray(Canvas canvas, Offset o, double u, Palette pal, {double spin = 0}) {
-    woodTile(canvas, o, u, pal);
-    const col = Color(0xFFB7794A);
-    final c = o + Offset(u / 2, u / 2);
-    canvas.drawCircle(c, u * .3, fill(const Color(0x33B7794A)));
-    canvas.save();
-    canvas.translate(c.dx, c.dy);
-    canvas.rotate(spin);
-    canvas.drawCircle(Offset.zero, u * .26, stroke(col, u * .06));
-    canvas.drawLine(Offset(-u * .07, -u * .14), Offset(-u * .07, u * .14), stroke(col, u * .06));
-    canvas.drawLine(Offset(u * .07, -u * .14), Offset(u * .07, u * .14), stroke(col, u * .06));
-    canvas.drawPath(
-        Path()
-          ..moveTo(-u * .16, -u * .05)
-          ..lineTo(-u * .07, -u * .19)
-          ..lineTo(u * .02, -u * .05)
-          ..close(),
-        fill(col));
-    canvas.drawPath(
-        Path()
-          ..moveTo(-u * .02, u * .05)
-          ..lineTo(u * .07, u * .19)
-          ..lineTo(u * .16, u * .05)
-          ..close(),
-        fill(col));
-    canvas.restore();
-  }
-
-  static void oneWay(Canvas canvas, Offset o, double u, Palette pal, Dir d) {
-    woodTile(canvas, o, u, pal);
-    canvas.drawRRect(rr(o.dx + u * .12, o.dy + u * .12, u * .76, u * .76, u * .12), fill(const Color(0x1FB7794A)));
-    chevrons(canvas, o + Offset(u / 2, u / 2), u, d, const Color(0xFFB7794A));
-  }
-
-  static void counter(Canvas canvas, Offset o, double u, Palette pal, {required bool used, double pulse = 0}) {
-    woodTile(canvas, o, u, pal);
-    final col = used ? const Color(0xFF8C939D) : const Color(0xFF4C6A88);
-    canvas.drawRRect(rr(o.dx + u * .14, o.dy + u * .14, u * .72, u * .72, u * .14), fill(col));
-    // slot
-    canvas.drawRRect(rr(o.dx + u * .26, o.dy + u * .24, u * .48, u * .1, u * .05), fill(const Color(0x66000000)));
-    final c = o + Offset(u / 2, u * .58);
+  /// Return counter: a little booth with a slot. Closed shutter once used.
+  static void counter(Canvas canvas, Offset o, double u, Palette pal, {required bool used, double depth = .3, double pulse = 0}) {
+    final w = u * .03;
+    final d = u * depth;
+    final topR = Rect.fromLTWH(o.dx + u * .04, o.dy + u * .06, u * .92, u - d - u * .06);
+    final frontR = Rect.fromLTWH(o.dx + u * .04, o.dy + u - d, u * .92, d - u * .02);
+    inked(canvas, Path()..addRRect(RRect.fromRectAndRadius(topR, Radius.circular(u * .06))), pal.woodLight, w);
+    // rack of clean plates on top
+    for (var i = 0; i < 3; i++) {
+      final x = topR.left + u * .2 + i * u * .12;
+      canvas.drawOval(Rect.fromCenter(center: Offset(x, topR.top + u * .2), width: u * .08, height: u * .22), fill(const Color(0xFFFFFCF4)));
+      canvas.drawOval(Rect.fromCenter(center: Offset(x, topR.top + u * .2), width: u * .08, height: u * .22), stroke(kInk, w * .6));
+    }
+    inked(canvas, Path()..addRect(frontR), pal.wood, w);
+    final slot = Rect.fromLTWH(o.dx + u * .2, o.dy + u * .34, u * .6, u * .28);
     if (used) {
-      final p = Path()
-        ..moveTo(c.dx - u * .12, c.dy)
-        ..lineTo(c.dx - u * .03, c.dy + u * .09)
-        ..lineTo(c.dx + u * .13, c.dy - u * .09);
-      canvas.drawPath(p, stroke(Colors.white, u * .06));
+      inked(canvas, Path()..addRRect(RRect.fromRectAndRadius(slot, Radius.circular(u * .03))), const Color(0xFF9A9186), w);
+      for (var i = 1; i < 4; i++) {
+        final y = slot.top + slot.height * i / 4;
+        canvas.drawLine(Offset(slot.left + u * .02, y), Offset(slot.right - u * .02, y), stroke(kInk.withValues(alpha: .5), w * .6));
+      }
     } else {
-      final w = u * .06;
-      canvas.drawLine(c + Offset(0, -u * .14 + pulse * u * .04), c + Offset(0, u * .08 + pulse * u * .04), stroke(Colors.white, w));
+      inked(canvas, Path()..addRRect(RRect.fromRectAndRadius(slot, Radius.circular(u * .03))), const Color(0xFF2A1E18), w);
+      // little noren over the slot
+      final nr = Rect.fromLTWH(slot.left - u * .02, slot.top - u * .05, slot.width + u * .04, u * .12 + pulse * u * .01);
+      for (var i = 0; i < 3; i++) {
+        final pw = nr.width / 3;
+        inked(canvas, Path()..addRect(Rect.fromLTWH(nr.left + i * pw + u * .005, nr.top, pw - u * .01, nr.height)), pal.noren, w * .6);
+      }
+      // down arrow on the booth front
+      final a = Offset(o.dx + u * .5, frontR.center.dy + pulse * u * .02);
       canvas.drawPath(
           Path()
-            ..moveTo(c.dx - u * .1, c.dy + pulse * u * .04)
-            ..lineTo(c.dx, c.dy + u * .12 + pulse * u * .04)
-            ..lineTo(c.dx + u * .1, c.dy + pulse * u * .04),
-          stroke(Colors.white, w));
+            ..moveTo(a.dx - u * .07, a.dy - u * .03)
+            ..lineTo(a.dx, a.dy + u * .04)
+            ..lineTo(a.dx + u * .07, a.dy - u * .03),
+          stroke(const Color(0xFFFFF3D6), u * .035));
+    }
+  }
+
+  /// Two paw prints on a cell: the hint.
+  static void paws(Canvas canvas, Offset c, double u, Color color, double alpha) {
+    final p = fill(color.withValues(alpha: alpha));
+    for (final (dx, dy, s) in [(-.13, .1, 1.0), (.13, -.1, 1.0)]) {
+      final o = c + Offset(dx * u, dy * u);
+      canvas.drawOval(Rect.fromCenter(center: o + Offset(0, u * .04), width: u * .14 * s, height: u * .11 * s), p);
+      for (final (tx, ty) in [(-.06, -.04), (-.02, -.075), (.02, -.075), (.06, -.04)]) {
+        canvas.drawCircle(o + Offset(tx * u, ty * u), u * .025, p);
+      }
     }
   }
 }

@@ -24,11 +24,11 @@ void main() {
   testWidgets('title shows and opens the stage list', (tester) async {
     await boot(tester);
     expect(find.text('つみあげ出前'), findsOneWidget);
-    await tester.tap(find.text('ステージ'));
+    await tester.tap(find.text('お品書き'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('はじめての出前'), findsWidgets);
-    expect(find.text('返却口'), findsWidgets);
+    expect(find.text('まちの食堂'), findsWidgets);
+    expect(find.text('駅前の定食屋'), findsWidgets);
   });
 
   testWidgets('clearing a stage with the keyboard shows the result and saves it', (tester) async {
@@ -44,11 +44,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
     }
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('配達完了！'), findsOneWidget);
+    expect(find.text('毎度あり！'), findsOneWidget);
     expect(progress.best(allLevels.first.id), 4);
     expect(progress.stars(allLevels.first), 3);
 
-    await tester.tap(find.text('次のステージへ'));
+    await tester.tap(find.text('次の出前へ'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('上から順に'), findsOneWidget);
@@ -60,7 +60,7 @@ void main() {
     tester.state<NavigatorState>(find.byType(Navigator)).push(GameScreen.route(c01));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('新しいしかけ'), findsOneWidget);
+    expect(find.text('おしらせ'), findsOneWidget);
     await tester.tap(find.text('わかった'));
     await tester.pump(const Duration(milliseconds: 400));
     expect(progress.introSeen('counter'), isTrue);

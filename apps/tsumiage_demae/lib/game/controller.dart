@@ -122,6 +122,7 @@ class GameController extends ChangeNotifier {
   }
 
   void _afterChange({bool followHint = false}) {
+    _bump = null;
     // Keep the hint going while the player follows it.
     _hint = null;
     if (isWon) {

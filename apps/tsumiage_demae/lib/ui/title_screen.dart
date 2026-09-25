@@ -1,20 +1,51 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../app/scope.dart';
 import '../app/strings.dart';
 import '../app/theme.dart';
 import '../game/levels.dart';
+import 'art.dart';
 import 'auto_play.dart';
 import 'game_screen.dart';
 import 'how_to_play_screen.dart';
+import 'ink_icons.dart';
+import 'paper.dart';
 import 'settings_screen.dart';
 import 'stage_select_screen.dart';
 import 'widgets.dart';
 
 const _demoMap = ['########', '#Pba..A#', '#.##B###', '########'];
 
-class TitleScreen extends StatelessWidget {
+/// The shop front: a noren over the door, the sign, and a window onto the
+/// dining room where the cat is already at work.
+class TitleScreen extends StatefulWidget {
   const TitleScreen({super.key});
+
+  @override
+  State<TitleScreen> createState() => _TitleScreenState();
+}
+
+class _TitleScreenState extends State<TitleScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _sway = AnimationController(vsync: this, duration: const Duration(seconds: 4));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduce = AppScope.of(context).settings.reduceMotion(context);
+    if (reduce) {
+      _sway.stop();
+    } else if (!_sway.isAnimating) {
+      _sway.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _sway.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +56,7 @@ class TitleScreen extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final started = progress.clearedCount > 0 || progress.lastLevelId != null;
     final cont = progress.continueLevel;
+    final short = MediaQuery.sizeOf(context).height < 720;
 
     Future<void> play() async {
       if (!started && !progress.introSeen('howto')) {
@@ -36,93 +68,141 @@ class TitleScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Column(
-                children: [
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                      tooltip: s.settings,
-                      icon: const Icon(Icons.settings_rounded),
-                      onPressed: () => Navigator.of(context).push(SettingsScreen.route()),
-                    ),
+      body: PaperBackground(
+        child: Stack(
+          children: [
+            // noren over the entrance
+            Positioned(
+              left: -6,
+              right: -6,
+              top: 0,
+              height: MediaQuery.paddingOf(context).top + (short ? 64 : 92),
+              child: AnimatedBuilder(
+                animation: _sway,
+                builder: (_, _) => CustomPaint(
+                  painter: NorenPainter(
+                    color: pal.noren,
+                    text: pal.onNoren,
+                    sway: math.sin(_sway.value * 2 * math.pi) * .25,
+                    panels: 5,
+                    crest: lang == 'ja' ? '出' : 'D',
                   ),
-                  const Spacer(flex: 2),
-                  Text(
-                    s.appTitle,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 44, fontWeight: FontWeight.w900, color: pal.ink, height: 1.1, letterSpacing: 1),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(s.tagline, textAlign: TextAlign.center, style: TextStyle(color: pal.muted, fontSize: 14)),
-                  const SizedBox(height: 24),
-                  Container(
-                    height: 170,
-                    decoration: BoxDecoration(color: pal.tint(.22), borderRadius: BorderRadius.circular(22)),
-                    padding: const EdgeInsets.all(10),
-                    child: const AutoPlayBoard(map: _demoMap, maxCell: 50),
-                  ),
-                  const Spacer(flex: 2),
-                  SizedBox(
-                    width: double.infinity,
-                    child: SoftButton(
-                      primary: true,
-                      icon: Icons.play_arrow_rounded,
-                      label: started ? '${s.continueFrom}  ${cont.chapter.number}-${cont.number} ${cont.name(lang)}' : s.play,
-                      onPressed: play,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SoftButton(
-                          icon: Icons.grid_view_rounded,
-                          label: s.stages,
-                          onPressed: () => Navigator.of(context).push(StageSelectScreen.route()),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: SoftButton(
-                          icon: Icons.menu_book_rounded,
-                          label: s.howToPlay,
-                          onPressed: () => Navigator.of(context).push(HowToPlayScreen.route()),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      const StarRow(stars: 1, max: 1, size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${progress.totalStars} / ${allLevels.length * 3}',
-                        style: TextStyle(color: pal.muted, fontWeight: FontWeight.w700, fontFeatures: const [FontFeature.tabularFigures()]),
-                      ),
-                      const SizedBox(width: 16),
-                      Icon(Icons.flag_rounded, size: 18, color: pal.muted),
-                      const SizedBox(width: 4),
-                      Text(
-                        s.clearedCount(progress.clearedCount, allLevels.length),
-                        style: TextStyle(color: pal.muted, fontWeight: FontWeight.w700, fontFeatures: const [FontFeature.tabularFigures()]),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                ],
+                ),
               ),
             ),
-          ),
+            SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: Column(
+                      children: [
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: Padding(
+                            padding: EdgeInsets.only(top: short ? 68 : 96),
+                            child: RoundWoodButton(
+                              glyph: InkGlyph.settings,
+                              tooltip: s.settings,
+                              onPressed: () => Navigator.of(context).push(SettingsScreen.route()),
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Signboard(
+                              padding: const EdgeInsets.fromLTRB(26, 10, 26, 14),
+                              child: Column(
+                                children: [
+                                  Text(s.appTitle, textAlign: TextAlign.center, style: display((lang == 'ja' ? 46 : 38) * (short ? .82 : 1), kInk, height: 1.1)),
+                                  Text(s.appTitleKana, style: display(13, kInk.withValues(alpha: .6))),
+                                ],
+                              ),
+                            ),
+                            Positioned(right: -10, top: -18, child: _OpenTag(text: s.openSign)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(s.tagline, textAlign: TextAlign.center, style: display(15, pal.inkSoft)),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: short ? 112 : 176,
+                          child: const WoodFrame(child: AutoPlayBoard(map: _demoMap, maxCell: 54)),
+                        ),
+                        const Spacer(),
+                        SizedBox(
+                          width: double.infinity,
+                          child: WoodButton(
+                            kind: WoodKind.shu,
+                            glyph: InkGlyph.play,
+                            label: started ? '${s.continueFrom}  ${cont.chapter.number}-${cont.number} ${cont.name(lang)}' : s.play,
+                            onPressed: play,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: WoodButton(
+                                glyph: InkGlyph.menu,
+                                label: s.stages,
+                                seed: 8,
+                                onPressed: () => Navigator.of(context).push(StageSelectScreen.route()),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: WoodButton(
+                                glyph: InkGlyph.book,
+                                label: s.howToPlay,
+                                seed: 9,
+                                onPressed: () => Navigator.of(context).push(HowToPlayScreen.route()),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 6,
+                          children: [
+                            const HankoStars(stars: 1, total: 1, size: 20),
+                            Text('× ${progress.totalStars} / ${allLevels.length * 3}', style: display(15, pal.inkSoft)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+/// The little "open" tag hanging off the corner of the sign.
+class _OpenTag extends StatelessWidget {
+  const _OpenTag({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.palette;
+    return Transform.rotate(
+      angle: .18,
+      child: PaperSlip(
+        seed: 44,
+        color: pal.shu,
+        padding: const EdgeInsets.fromLTRB(9, 4, 9, 5),
+        child: Text(text, style: display(14, pal.onShu)),
       ),
     );
   }

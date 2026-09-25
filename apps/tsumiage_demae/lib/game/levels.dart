@@ -15,10 +15,10 @@ final List<Chapter> chapters = [
     number: 1,
     id: 'basic',
     icon: 'dish',
-    titleJa: 'はじめての出前',
-    titleEn: 'First Deliveries',
-    subJa: '通れば必ず拾う。あとから拾った料理ほど上に来る。',
-    subEn: 'You pick up whatever you walk over. The last dish picked up is on top.',
+    titleJa: 'まちの食堂',
+    titleEn: 'The Corner Diner',
+    subJa: 'はじめての出前。通れば必ず拾う、あとから拾った料理ほど上に来る。',
+    subEn: 'First deliveries. You pick up whatever you walk over; the last dish is on top.',
     levels: [
       Level(id: 'b01', ja: 'はじめての出前', en: 'First Order', par: 4, map: [
         '#######',
@@ -99,10 +99,10 @@ final List<Chapter> chapters = [
     number: 2,
     id: 'counter',
     icon: 'counter',
-    titleJa: '返却口',
-    titleEn: 'Return Counter',
-    subJa: '体当たりで一番上の1皿を引き取ってくれる。使えるのは1回だけ。',
-    subEn: 'Bump it to hand back your top dish. Each counter works once.',
+    titleJa: '駅前の定食屋',
+    titleEn: 'Station Set-Meal Shop',
+    subJa: '返却口：ぶつかると一番上の1皿を引き取ってくれる。1回だけ。',
+    subEn: 'Return counter: bump it to hand back your top dish. Works once.',
     levels: [
       Level(id: 'c01', ja: 'はじめての返却', en: 'First Return', par: 5, map: [
         '#######',
@@ -170,10 +170,10 @@ final List<Chapter> chapters = [
     number: 3,
     id: 'tray',
     icon: 'tray',
-    titleJa: 'くるりトレイ',
-    titleEn: 'Flip Tray',
-    subJa: '乗ると頭の上の料理が上下さかさまになる。',
-    subEn: 'Step on it and your whole stack turns upside down.',
+    titleJa: '坂の上の喫茶店',
+    titleEn: 'Hilltop Café',
+    subJa: 'くるりのお盆：乗ると頭の上の料理が上下さかさまになる。',
+    subEn: 'Flip tray: step on it and your whole stack turns upside down.',
     levels: [
       Level(id: 't02', ja: '下からくるり', en: 'Flip from Below', par: 9, map: [
         '######',
@@ -242,10 +242,10 @@ final List<Chapter> chapters = [
     number: 4,
     id: 'oneway',
     icon: 'oneWay',
-    titleJa: '一方通行',
-    titleEn: 'One Way',
-    subJa: '矢印の向きに進むときだけ入れる床。戻り道に気をつけて。',
-    subEn: 'Floors you can only enter moving the way the arrows point.',
+    titleJa: '路地裏',
+    titleEn: 'Back Alleys',
+    subJa: '一方通行：矢印の向きに進むときだけ入れる道。戻り道に気をつけて。',
+    subEn: 'One-way lanes: enter only the way the arrows point.',
     levels: [
       Level(id: 'o01', ja: '一方通行', en: 'One Way', par: 7, map: [
         '######',
@@ -316,10 +316,10 @@ final List<Chapter> chapters = [
     number: 5,
     id: 'mix',
     icon: 'mix',
-    titleJa: '満員御礼',
-    titleEn: 'Full House',
-    subJa: 'これまでのしかけを組み合わせた総仕上げ。',
-    subEn: 'Every trick you have learned, working together.',
+    titleJa: '夏祭りの夜',
+    titleEn: 'Summer Festival Night',
+    subJa: '屋台が並ぶお祭りの夜。これまでのしかけが総出演。',
+    subEn: 'A night of festival stalls, with every trick you have learned.',
     levels: [
       Level(id: 'm01', ja: '返却と矢印', en: 'Counters and Arrows', par: 14, map: [
         '########',
