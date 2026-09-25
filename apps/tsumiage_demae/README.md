@@ -1,0 +1,52 @@
+# つみあげ出前 (Stack & Deliver)
+
+料理の上を通ると頭の上に積み上がり、お客さんには一番上の料理しか渡せない――
+どの順番で拾えば全員に届けられるかを考える、倉庫番系のパズルゲームです。
+「チルパズル工房 第2弾」の試作をもとに、Flutter で iOS / Android 向けに作りました。
+
+- 全46ステージ（5章）。しかけは返却口・くるりトレイ・一方通行
+- 無制限の「1手戻す／1手進む」、最短解にもとづくヒント、詰みのお知らせ
+- 目標手数と★、面ごとの最少手数の記録、続きから再開
+- 日本語・英語、ライト・ダーク、アニメーションを減らす設定、読み上げ対応
+- 効果音・BGM・アイコンはすべてこのリポジトリ内で生成（外部素材なし）
+- 通信・広告なし
+
+仕様は [docs/SPEC.md](docs/SPEC.md)、公開手順は [docs/RELEASE.md](docs/RELEASE.md) を参照してください。
+
+## 動かす
+
+```sh
+flutter pub get
+flutter run            # 接続中の端末やシミュレータで起動
+flutter run -d chrome  # ブラウザでも遊べます（開発用）
+```
+
+## テスト
+
+```sh
+flutter analyze
+flutter test
+```
+
+`test/levels_test.dart` は全ステージを総当たりで解き、目標手数が最短であること、しかけが解き方に効いていることを確かめます。
+
+## 構成
+
+```
+lib/
+  game/     ルール（engine）、幅優先探索（solver）、ステージ（levels）、プレイ状態（controller）
+  ui/       画面と盤面の描画（board_painter, art）
+  app/      テーマ、文言（日英）、設定、進行データ
+  audio/    効果音と BGM
+tool/
+  gen_levels.dart     ステージ候補の自動生成と選別
+  verify_levels.dart  全ステージの最短手数としかけの効き具合を表示
+  make_audio.py       効果音と BGM の合成
+  make_icons.js       アプリアイコンの生成
+```
+
+`lib/game/` は Flutter に依存しない純粋な Dart なので、`dart run tool/...` で直接使えます。
+
+## ライセンス
+
+フォント Zen Maru Gothic は SIL Open Font License 1.1（`assets/fonts/OFL.txt`）。アプリ内の「設定 → ライセンス」にも表示されます。
