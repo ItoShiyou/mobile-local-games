@@ -83,6 +83,7 @@ class SceneLayers {
     final lightsAt = <(Offset, double)>[];
     final rec = ui.PictureRecorder();
     final canvas = Canvas(rec);
+    _paintRoomShadow(canvas, b, u);
     _paintFloor(canvas, b, u, sc);
     _paintShadows(canvas, b, u);
     _paintWalls(canvas, b, u, sc, pal, lightsAt, night);
@@ -225,22 +226,21 @@ class SceneLayers {
   static void _paintWalls(Canvas c, Board b, double u, Scene sc, Palette pal, List<(Offset, double)> lights, bool night) {
     final w = u * .03;
     final d = u * wallDepth;
+    final caps = <Rect>[];
+    final fronts = <(Rect, int, int)>[];
     for (var y = 0; y < b.height; y++) {
       for (var x = 0; x < b.width; x++) {
         if (!_isWall(b, x, y)) continue;
         final o = Offset(x * u, y * u);
+        if (_isRing(b, x, y)) {
+          _ringWall(b, x, y, u, d, caps, fronts);
+          continue;
+        }
         if (!_nearFloor(b, x, y)) {
-          // beyond the room: the roof / outside, seen from above
-          c.drawRect(Rect.fromLTWH(o.dx, o.dy, u + .5, u + .5), Art.fill(sc.outside));
-          final h = _hash(x, y, 4);
-          if (sc.wall == WallKind.fence || sc.wall == WallKind.stalls) {
-            for (var k = 0; k < 3; k++) {
-              c.drawCircle(o + Offset(u * (.2 + ((h >> (k * 3)) % 7) / 10), u * (.2 + ((h >> (k * 5)) % 7) / 10)), u * .16,
-                  Art.fill(Color.lerp(sc.outside, Colors.black, .12 + k * .05)!));
-            }
-          } else {
-            c.drawLine(o + Offset(0, u * .5), o + Offset(u, u * .5), Art.stroke(Color.lerp(sc.outside, Colors.black, .15)!, u * .02));
-          }
+          // a solid block inside the room (a built-in cupboard, a stall)
+          final r = Rect.fromLTWH(o.dx, o.dy, u + .5, u + .5);
+          c.drawRect(r, Art.fill(Color.lerp(sc.wallTop, Colors.black, .12)!));
+          c.drawLine(o + Offset(u * .15, u * .5), o + Offset(u * .85, u * .5), Art.stroke(Color.lerp(sc.wallTop, Colors.black, .25)!, u * .02));
           continue;
         }
         final hasFront = b.inside(x, y + 1) && !_isWall(b, x, y + 1);
@@ -281,6 +281,86 @@ class SceneLayers {
         }
       }
     }
+    _paintRing(c, b, u, sc, pal, caps, fronts, lights, night);
+  }
+
+  static bool _isRing(Board b, int x, int y) => x == 0 || y == 0 || x == b.width - 1 || y == b.height - 1;
+
+  /// Outer walls are drawn thin, hugging the floor, so the room sits on the
+  /// shop wall behind it instead of inside a thick frame.
+  static void _ringWall(Board b, int x, int y, double u, double d, List<Rect> caps, List<(Rect, int, int)> fronts) {
+    final t = u * .2;
+    final o = Offset(x * u, y * u);
+    bool floorAt(int xx, int yy) => b.inside(xx, yy) && !_isWall(b, xx, yy);
+    final top = y == 0, bottom = y == b.height - 1, left = x == 0, right = x == b.width - 1;
+    if (top && !left && !right) {
+      if (floorAt(x, y + 1)) {
+        caps.add(Rect.fromLTWH(o.dx, o.dy + u - d - t, u, t));
+        fronts.add((Rect.fromLTWH(o.dx, o.dy + u - d, u, d), x, y));
+      } else {
+        caps.add(Rect.fromLTWH(o.dx, o.dy + u - d - t, u, d + t));
+      }
+    }
+    if (bottom && !left && !right) {
+      caps.add(Rect.fromLTWH(o.dx, o.dy, u, t));
+      fronts.add((Rect.fromLTWH(o.dx, o.dy + t, u, u * .14), -1, -1));
+    }
+    if (left || right) {
+      final y0 = top ? o.dy + u - d - t : o.dy;
+      final y1 = bottom ? o.dy + t : o.dy + u;
+      final x0 = left ? o.dx + u - t : o.dx;
+      caps.add(Rect.fromLTRB(x0, y0, x0 + t, y1));
+      if (bottom) fronts.add((Rect.fromLTWH(x0, o.dy + t, t, u * .14), -1, -1));
+    }
+  }
+
+  static void _paintRing(Canvas c, Board b, double u, Scene sc, Palette pal, List<Rect> caps, List<(Rect, int, int)> fronts,
+      List<(Offset, double)> lights, bool night) {
+    final w = u * .03;
+    Path union(Iterable<Rect> rs) {
+      var p = Path();
+      for (final r in rs) {
+        p = Path.combine(PathOperation.union, p, Path()..addRect(r.inflate(.3)));
+      }
+      return p;
+    }
+
+    for (final (r, _, _) in fronts) {
+      _wallFront(c, r, u, sc, (r.left / u).round());
+    }
+    final fp = union(fronts.map((e) => e.$1));
+    c.drawPath(fp, Art.stroke(kInk, w));
+    for (final (r, x, y) in fronts) {
+      if (x < 0) continue;
+      final h = _hash(x, y, 11);
+      if (h % 100 < 55) {
+        final dec = sc.decor[h % sc.decor.length];
+        if (!dec.front) continue;
+        final at = r.center;
+        _decor(c, dec, at, u, pal, h);
+        if (dec.light) lights.add((at, u * 1.3));
+        if (night && dec == Decor.window) lights.add((at, u * .8));
+      }
+    }
+    // fill piece by piece (a unioned ring would fill its hole too), then
+    // outline the joined shape once so there are no seams
+    final capColor = Color.lerp(sc.wallTop, Colors.white, .12)!;
+    for (final r in caps) {
+      c.drawRect(r.inflate(.3), Art.fill(capColor));
+    }
+    c.drawPath(union(caps), Art.stroke(kInk, w));
+  }
+
+  static void _paintRoomShadow(Canvas c, Board b, double u) {
+    final room = Path();
+    for (var y = 0; y < b.height; y++) {
+      for (var x = 0; x < b.width; x++) {
+        if (!_isRing(b, x, y)) room.addRect(Rect.fromLTWH(x * u, y * u, u, u));
+      }
+    }
+    c.drawPath(room.shift(Offset(0, u * .18)), Paint()
+      ..color = const Color(0x55201008)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, u * .3));
   }
 
   static void _wallTop(Canvas c, Rect r, double u, Scene sc) {
@@ -478,6 +558,10 @@ class BoardPainter {
     final pickA = flipped ? .3 : .45, pickB = flipped ? .62 : 1.0;
     final flipA = picked != null ? .6 : .45;
 
+    final all = Offset.zero & size;
+    // Everything on the board goes in one layer so that the evening tint
+    // only darkens what is drawn (the room), not the transparent wall around it.
+    canvas.saveLayer(all.inflate(u), Paint());
     canvas.drawPicture(layers.base);
 
     // ---- trays (they spin when used) ----
@@ -640,11 +724,14 @@ class BoardPainter {
     }
 
     // ---- evening light ----
-    final all = Offset.zero & size;
     if (f.night) {
-      canvas.drawRect(all, Paint()
+      canvas.drawRect(all.inflate(u), Paint()
         ..color = const Color(0xFF8C93BA)
-        ..blendMode = BlendMode.multiply);
+        ..blendMode = BlendMode.modulate);
+    }
+    PaperGrain.paint(canvas, all, opacity: .5);
+    canvas.restore();
+    if (f.night) {
       canvas.drawPicture(layers.lights);
       // the courier carries a little warmth with them
       canvas.drawCircle(
@@ -656,6 +743,5 @@ class BoardPainter {
               .createShader(Rect.fromCircle(center: center, radius: u * 1.2)),
       );
     }
-    PaperGrain.paint(canvas, all, opacity: .6);
   }
 }

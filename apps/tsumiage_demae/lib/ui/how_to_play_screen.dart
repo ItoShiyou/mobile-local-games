@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/strings.dart';
 import '../app/theme.dart';
 import 'art.dart';
+import 'backdrop.dart';
 import 'auto_play.dart';
 import 'ink_icons.dart';
 import 'paper.dart';
@@ -42,7 +43,7 @@ class _HowToPlayScreenState extends State<HowToPlayScreen> {
     final pages = s.howToPages;
     final last = _index == pages.length - 1;
     return Scaffold(
-      body: PaperBackground(
+      body: DeskBackground(
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(

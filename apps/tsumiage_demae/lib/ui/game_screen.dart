@@ -13,12 +13,14 @@ import '../game/controller.dart';
 import '../game/engine.dart';
 import '../game/levels.dart';
 import 'art.dart';
+import 'backdrop.dart';
 import 'board_view.dart';
 import 'ink_icons.dart';
 import 'paper.dart';
 import 'scene.dart';
 import 'settings_screen.dart';
 import 'widgets.dart';
+import 'world_controls.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key, required this.level});
@@ -33,7 +35,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   static const double _maxCell = 76;
-  static const double _frame = 12;
+  static const double _frame = 4;
 
   late GameController _c;
   final _focus = FocusNode(debugLabel: 'game');
@@ -210,36 +212,41 @@ class _GameScreenState extends State<GameScreen> {
     final s = Strings.of(context);
     final reduce = scope.settings.reduceMotion(context);
     final st = _c.state;
-    final best = scope.progress.best(level.id);
     final lang = Localizations.localeOf(context).languageCode;
     final scene = sceneFor(level.chapter.id);
 
+    final pad = MediaQuery.paddingOf(context);
     return Scaffold(
-      body: PaperBackground(
-        child: SafeArea(
-          child: Focus(
-            focusNode: _focus,
-            autofocus: true,
-            onKeyEvent: _onKey,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-                  child: Column(
-                    children: [
-                      _TopBar(level: level, lang: lang),
-                      const SizedBox(height: 6),
-                      _Hud(state: st, level: level, moves: _c.moves, best: best),
-                      const SizedBox(height: 8),
-                      Expanded(child: _boardArea(context, s, scene, reduce, st)),
-                      const SizedBox(height: 10),
-                      _Controls(controller: _c, onMove: _move, onUndo: _undo, onRedo: _redo, onRestart: _restart, onHint: _hint),
-                    ],
+      body: SceneBackdrop(
+        scene: scene,
+        child: Focus(
+          focusNode: _focus,
+          autofocus: true,
+          onKeyEvent: _onKey,
+          child: Column(
+            children: [
+              _TopBand(level: level, lang: lang, state: st, moves: _c.moves, safeTop: pad.top, night: scene.alwaysNight),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: _boardArea(context, s, scene, reduce, st),
+                    ),
                   ),
                 ),
               ),
-            ),
+              _CounterBand(
+                controller: _c,
+                safeBottom: pad.bottom,
+                onMove: _move,
+                onUndo: _undo,
+                onRedo: _redo,
+                onRestart: _restart,
+                onHint: _hint,
+              ),
+            ],
           ),
         ),
       ),
@@ -263,13 +270,6 @@ class _GameScreenState extends State<GameScreen> {
       return Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            left: ox - _frame,
-            top: oy - _frame,
-            width: bw + _frame * 2,
-            height: bh + _frame * 2,
-            child: CustomPaint(painter: _FramePainter(context.palette)),
-          ),
           Positioned.fill(
             child: Padding(
               padding: const EdgeInsets.all(_frame),
@@ -346,231 +346,6 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
         ],
-      );
-    });
-  }
-}
-
-/// Wooden frame around the diorama.
-class _FramePainter extends CustomPainter {
-  _FramePainter(this.pal);
-  final Palette pal;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final r = Offset.zero & size;
-    final outer = Wob.rrect(r.deflate(1), 14, seed: 40, amp: 1.2);
-    canvas.drawPath(outer.shift(const Offset(0, 5)), Paint()..color = const Color(0x44000000)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
-    canvas.drawPath(outer, Paint()..color = pal.woodDark);
-    canvas.save();
-    canvas.clipPath(outer);
-    final g = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..color = const Color(0x22FFFFFF);
-    for (var i = 0; i < 6; i++) {
-      canvas.drawRRect(RRect.fromRectAndRadius(r.deflate(2.0 + i * 1.7), const Radius.circular(12)), g);
-    }
-    PaperGrain.paint(canvas, r);
-    canvas.restore();
-    canvas.drawPath(outer, Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = kInk);
-  }
-
-  @override
-  bool shouldRepaint(_FramePainter o) => o.pal != pal;
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.level, required this.lang});
-  final Level level;
-  final String lang;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = Strings.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RoundWoodButton(glyph: InkGlyph.back, tooltip: s.back, onPressed: () => Navigator.of(context).maybePop()),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Center(
-            child: Signboard(
-              hanging: true,
-              padding: const EdgeInsets.fromLTRB(22, 4, 22, 7),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('${level.chapter.title(lang)}  ${level.chapter.number}-${level.number}',
-                      maxLines: 1, overflow: TextOverflow.ellipsis, style: display(11.5, kInk.withValues(alpha: .7))),
-                  Text(level.name(lang), maxLines: 1, overflow: TextOverflow.ellipsis, style: display(19, kInk)),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        RoundWoodButton(glyph: InkGlyph.help, tooltip: s.rules, onPressed: () => showRulesSheet(context, level)),
-        const SizedBox(width: 6),
-        RoundWoodButton(
-          glyph: InkGlyph.settings,
-          tooltip: s.settings,
-          onPressed: () => Navigator.of(context).push(SettingsScreen.route()),
-        ),
-      ],
-    );
-  }
-}
-
-/// Order slips on a cord, and the chalkboard with the move count.
-class _Hud extends StatelessWidget {
-  const _Hud({required this.state, required this.level, required this.moves, required this.best});
-  final GameState state;
-  final Level level;
-  final int moves;
-  final int? best;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = Strings.of(context);
-    final pal = context.palette;
-    final g = state.board.guests;
-    return Semantics(
-      liveRegion: true,
-      label: '${s.orders} ${state.servedCount}/${g.length}. ${s.movesWord} $moves. ${s.parWord} ${level.par}.',
-      child: ExcludeSemantics(
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            children: [
-              Expanded(
-                child: CustomPaint(
-                  painter: _CordPainter(pal),
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 4, top: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12, right: 6),
-                          child: Text(s.orders, style: display(13, pal.inkSoft)),
-                        ),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                for (var i = 0; i < g.length; i++)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 3),
-                                    child: OrderSlip(kind: g[i].wants, served: state.isServed(i), stamp: s.servedStamp, index: i),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Chalkboard(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text.rich(TextSpan(children: [
-                      TextSpan(text: '${s.movesWord} '),
-                      TextSpan(text: '$moves', style: display(20, pal.chalk, height: 1)),
-                      TextSpan(text: '  ${s.parWord} ${level.par}', style: display(12.5, pal.chalk.withValues(alpha: .75))),
-                    ])),
-                    Text('${s.bestWord} ${best ?? '—'} ・ ${s.capacity(state.board.capacity)}', style: display(11.5, pal.chalk.withValues(alpha: .7))),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CordPainter extends CustomPainter {
-  _CordPainter(this.pal);
-  final Palette pal;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Path()
-      ..moveTo(0, 8)
-      ..quadraticBezierTo(size.width / 2, 16, size.width, 8);
-    canvas.drawPath(p, Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..color = pal.inkSoft);
-  }
-
-  @override
-  bool shouldRepaint(_CordPainter o) => o.pal != pal;
-}
-
-class _Controls extends StatelessWidget {
-  const _Controls({
-    required this.controller,
-    required this.onMove,
-    required this.onUndo,
-    required this.onRedo,
-    required this.onRestart,
-    required this.onHint,
-  });
-  final GameController controller;
-  final void Function(Dir) onMove;
-  final VoidCallback onUndo, onRedo, onRestart, onHint;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = Strings.of(context);
-    final c = controller;
-    return LayoutBuilder(builder: (context, box) {
-      final h = MediaQuery.sizeOf(context).height;
-      final arm = h < 640 ? 34.0 : (box.maxWidth < 360 || h < 740 ? 42.0 : 48.0);
-      final tools = [
-        WoodButton(vertical: true, glyph: InkGlyph.undo, label: s.undo, onPressed: c.canUndo ? onUndo : null, seed: 1),
-        WoodButton(vertical: true, glyph: InkGlyph.redo, label: s.redo, onPressed: c.canRedo ? onRedo : null, seed: 2),
-        WoodButton(vertical: true, glyph: InkGlyph.restart, label: s.restart, onPressed: c.canUndo || c.canRedo ? onRestart : null, seed: 3),
-        WoodButton(
-          vertical: true,
-          kind: WoodKind.noren,
-          glyph: InkGlyph.hint,
-          label: s.hint,
-          glow: c.hint != null,
-          onPressed: c.isWon || c.stuck ? null : onHint,
-          seed: 4,
-        ),
-      ];
-      return SizedBox(
-        height: arm * 3 + 6,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            WoodDPad(onMove: onMove, highlight: c.hint, enabled: !c.isWon, arm: arm),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: tools[0]), const SizedBox(width: 8), Expanded(child: tools[1])])),
-                  const SizedBox(height: 8),
-                  Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: tools[2]), const SizedBox(width: 8), Expanded(child: tools[3])])),
-                ],
-              ),
-            ),
-          ],
-        ),
       );
     });
   }
@@ -753,4 +528,249 @@ Future<void> showRulesSheet(BuildContext context, Level level) {
     ),
     actions: [Builder(builder: (context) => WoodButton(kind: WoodKind.shu, label: s.gotIt, onPressed: () => Navigator.pop(context)))],
   );
+}
+
+/// The top of the screen: the kitchen pass. A beam with the shop's noren
+/// (shop and dish name on it), tags for back / rules / settings, the order
+/// slips clipped to a rail and the little blackboard.
+class _TopBand extends StatelessWidget {
+  const _TopBand({required this.level, required this.lang, required this.state, required this.moves, required this.safeTop, required this.night});
+  final Level level;
+  final String lang;
+  final GameState state;
+  final int moves;
+  final double safeTop;
+  final bool night;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final pal = context.palette;
+    final g = state.board.guests;
+    final noren = night ? const Color(0xFF7A2E24) : pal.noren;
+    return SizedBox(
+      height: safeTop + 150,
+      child: Stack(
+        children: [
+          Positioned(top: 0, left: 0, right: 0, height: safeTop + 18, child: CustomPaint(painter: BeamPainter(pal, height: safeTop + 18))),
+          Positioned(
+            top: safeTop + 14,
+            left: 60,
+            right: 108,
+            height: 74,
+            child: CustomPaint(
+              painter: NorenPainter(color: noren, text: pal.onNoren, panels: 3, crest: '', rod: false),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('${level.chapter.title(lang)}  ${level.chapter.number}-${level.number}',
+                        maxLines: 1, overflow: TextOverflow.ellipsis, style: display(11.5, pal.onNoren.withValues(alpha: .8))),
+                    Text(level.name(lang), maxLines: 1, overflow: TextOverflow.ellipsis, style: display(21, pal.onNoren, height: 1.15)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: safeTop + 12,
+            left: 10,
+            child: HangingTag(
+              glyph: InkGlyph.back,
+              label: s.back,
+              showLabel: false,
+              width: 42,
+              height: 44,
+              onPressed: () => Navigator.of(context).maybePop(),
+              seed: 1,
+            ),
+          ),
+          Positioned(
+            top: safeTop + 12,
+            right: 56,
+            child: HangingTag(
+              glyph: InkGlyph.help,
+              label: s.rules,
+              showLabel: false,
+              width: 42,
+              height: 44,
+              onPressed: () => showRulesSheet(context, level),
+              seed: 2,
+            ),
+          ),
+          Positioned(
+            top: safeTop + 12,
+            right: 8,
+            child: HangingTag(
+              glyph: InkGlyph.settings,
+              label: s.settings,
+              showLabel: false,
+              width: 42,
+              height: 44,
+              onPressed: () => Navigator.of(context).push(SettingsScreen.route()),
+              seed: 3,
+            ),
+          ),
+          // order slips clipped to the rail
+          Positioned(
+            top: safeTop + 92,
+            left: 6,
+            right: 118,
+            height: 58,
+            child: Semantics(
+              label: '${s.orders} ${state.servedCount}/${g.length}',
+              child: ExcludeSemantics(
+                child: CustomPaint(
+                  painter: _RailPainter(),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 2, 4, 0),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (var i = 0; i < g.length; i++)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: OrderSlip(kind: g[i].wants, served: state.isServed(i), stamp: s.servedStamp, index: i),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: safeTop + 84,
+            right: 10,
+            child: Semantics(
+              label: '${s.movesWord} $moves. ${s.parWord} ${level.par}. ${s.capacity(state.board.capacity)}',
+              child: ExcludeSemantics(
+                child: WallChalkboard(moves: moves, par: level.par, capacity: state.board.capacity, movesWord: s.movesWord, parWord: s.parWord),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A thin brass rail with clips, for the order slips.
+class _RailPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const y = 4.0;
+    canvas.drawLine(const Offset(0, y + 2), Offset(size.width, y + 2), Art.stroke(const Color(0x33000000), 3));
+    canvas.drawLine(const Offset(0, y), Offset(size.width, y), Art.stroke(const Color(0xFFB08A45), 4));
+    canvas.drawLine(const Offset(0, y - 1), Offset(size.width, y - 1), Art.stroke(const Color(0x66FFFFFF), 1));
+    for (final x in [3.0, size.width - 3]) {
+      canvas.drawCircle(Offset(x, y), 4, Art.fill(const Color(0xFF8A6A30)));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RailPainter o) => false;
+}
+
+/// The bottom of the screen: the counter with the tray pad, and the tags
+/// and lantern hanging from a short rail.
+class _CounterBand extends StatelessWidget {
+  const _CounterBand({
+    required this.controller,
+    required this.safeBottom,
+    required this.onMove,
+    required this.onUndo,
+    required this.onRedo,
+    required this.onRestart,
+    required this.onHint,
+  });
+  final GameController controller;
+  final double safeBottom;
+  final void Function(Dir) onMove;
+  final VoidCallback onUndo, onRedo, onRestart, onHint;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final pal = context.palette;
+    final c = controller;
+    final screen = MediaQuery.sizeOf(context);
+    final short = screen.height < 700;
+    final narrow = screen.width < 360;
+    final tray = short || narrow ? 122.0 : 146.0;
+    final tagW = narrow ? 38.0 : 44.0;
+    final tagH = short ? 76.0 : 90.0;
+    final bandH = (short ? 148.0 : 172.0) + safeBottom;
+    return SizedBox(
+      height: bandH,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(left: 0, right: 0, bottom: 0, height: 58 + safeBottom, child: CustomPaint(painter: CounterPainter(pal))),
+          Positioned(
+            left: 12,
+            bottom: 26 + safeBottom,
+            child: TrayPad(size: tray, onMove: onMove, highlight: c.hint, enabled: !c.isWon),
+          ),
+          Positioned(
+            right: 8,
+            top: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                CustomPaint(size: Size(tagW * 4 + 42, 10), painter: _PegRailPainter(pal)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(width: 6),
+                    HangingTag(label: s.undo, glyph: InkGlyph.undo, width: tagW, height: tagH, onPressed: c.canUndo ? onUndo : null, seed: 4),
+                    const SizedBox(width: 6),
+                    HangingTag(label: s.redo, glyph: InkGlyph.redo, width: tagW, height: tagH, onPressed: c.canRedo ? onRedo : null, seed: 5),
+                    const SizedBox(width: 6),
+                    HangingTag(
+                      label: s.restart,
+                      glyph: InkGlyph.restart,
+                      width: tagW,
+                      height: tagH,
+                      wood: TagWood.dark,
+                      onPressed: c.canUndo || c.canRedo ? onRestart : null,
+                      seed: 6,
+                    ),
+                    const SizedBox(width: 8),
+                    LanternButton(
+                      label: s.hint,
+                      lit: c.hint != null,
+                      width: tagW + 10,
+                      height: tagH + 10,
+                      onPressed: c.isWon || c.stuck ? null : onHint,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The short wooden rail the tags hang from.
+class _PegRailPainter extends CustomPainter {
+  _PegRailPainter(this.pal);
+  final Palette pal;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = Rect.fromLTWH(0, 0, size.width, 10);
+    canvas.drawRect(r.shift(const Offset(0, 3)), Art.fill(const Color(0x33000000)));
+    Art.inked(canvas, Path()..addRRect(RRect.fromRectAndRadius(r, const Radius.circular(3))), pal.woodDark, 1.6);
+  }
+
+  @override
+  bool shouldRepaint(_PegRailPainter o) => o.pal != pal;
 }

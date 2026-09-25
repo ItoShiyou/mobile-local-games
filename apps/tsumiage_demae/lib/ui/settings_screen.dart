@@ -5,6 +5,7 @@ import '../app/settings.dart';
 import '../app/strings.dart';
 import '../app/theme.dart';
 import 'art.dart';
+import 'backdrop.dart';
 import 'how_to_play_screen.dart';
 import 'ink_icons.dart';
 import 'paper.dart';
@@ -23,7 +24,8 @@ class SettingsScreen extends StatelessWidget {
     final scope = AppScope.of(context);
     final st = scope.settings;
     final s = Strings.of(context);
-    final pal = context.palette;
+    // the notebook page is always cream paper with sumi ink, day or night
+    const pal = Palette.day;
 
     Widget row(InkGlyph glyph, String label, Widget trailing, {String? sub}) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -47,17 +49,11 @@ class SettingsScreen extends StatelessWidget {
 
     Widget rule() => CustomPaint(size: const Size(double.infinity, 6), painter: _RulePainter(pal));
 
-    Widget page(int seed, List<Widget> children) => Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: PaperSlip(
-            seed: seed,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Column(children: children),
-          ),
-        );
+    // every section is written on the same notebook page
+    Widget page(int seed, List<Widget> children) => Column(children: [...children, const SizedBox(height: 6), rule(), const SizedBox(height: 6)]);
 
     return Scaffold(
-      body: PaperBackground(
+      body: DeskBackground(
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -85,8 +81,10 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
                       children: [
+                        _NotebookPage(
+                          child: Column(children: [
                         page(51, [
                           row(InkGlyph.sound, s.sound, InkSwitch(value: st.sound, label: s.sound, onChanged: (v) => st.sound = v)),
                           rule(),
@@ -137,6 +135,9 @@ class SettingsScreen extends StatelessWidget {
                           rule(),
                           row(InkGlyph.info, s.version, Text(appVersion, style: display(15, pal.inkSoft))),
                         ]),
+                          ]),
+                        ),
+                        const SizedBox(height: 14),
                         Center(
                           child: WoodButton(
                             small: true,
@@ -220,4 +221,54 @@ class _RulePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RulePainter o) => o.pal != pal;
+}
+
+
+/// A page of the shop's account book: binding holes on the left and a
+/// vermilion margin line.
+class _NotebookPage extends StatelessWidget {
+  const _NotebookPage({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.palette;
+    return PaperSlip(
+      seed: 57,
+      tilt: -.5,
+      color: pal.night ? const Color(0xFFEDE3CF) : pal.card,
+      padding: EdgeInsets.zero,
+      child: CustomPaint(
+        painter: _BindingPainter(pal),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(42, 10, 16, 6),
+          child: Theme(
+            data: Theme.of(context).copyWith(extensions: [Palette.day]),
+            child: Builder(builder: (context) => DefaultTextStyle.merge(style: const TextStyle(color: kInk), child: child)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BindingPainter extends CustomPainter {
+  _BindingPainter(this.pal);
+  final Palette pal;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawLine(const Offset(32, 0), Offset(32, size.height), Paint()
+      ..color = pal.shu.withValues(alpha: .55)
+      ..strokeWidth = 1.4);
+    for (var y = 28.0; y < size.height - 10; y += 56) {
+      canvas.drawCircle(Offset(14, y), 5, Paint()..color = const Color(0xFF8A6A48));
+      canvas.drawCircle(Offset(14, y), 5, Paint()
+        ..style = PaintingStyle.stroke
+        ..color = kInk.withValues(alpha: .5));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BindingPainter o) => o.pal != pal;
 }

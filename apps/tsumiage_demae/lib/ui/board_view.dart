@@ -10,8 +10,12 @@ import 'board_painter.dart';
 import 'scene.dart';
 
 /// Cell size for a board that must fit in [box].
+///
+/// The outer ring of walls is drawn thin (see board_painter.dart), so only
+/// about 0.2 of a cell shows on the left, right and bottom and 0.6 at the
+/// back; the rest may spill past the box.
 double cellSizeFor(Board b, Size box, double maxCell) =>
-    math.min(math.min(box.width / b.width, box.height / b.height), maxCell).floorToDouble();
+    math.min(math.min(box.width / (b.width - 1.6), box.height / (b.height - 1.06)), maxCell).floorToDouble();
 
 /// Animated board for a [GameController]. Handles swipes (one move per
 /// ~0.7 cell of drag, so a long drag walks several cells) and taps on a
@@ -153,8 +157,9 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
             label: widget.semanticLabel,
             liveRegion: true,
             child: RepaintBoundary(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(u * .12),
+              child: OverflowBox(
+                maxWidth: double.infinity,
+                maxHeight: double.infinity,
                 child: CustomPaint(size: size, painter: _AnimatedBoardPainter(this, pal, u)),
               ),
             ),
