@@ -36,7 +36,10 @@ flutter test
 ```
 lib/
   game/     ルール（engine）、幅優先探索（solver）、ステージ（levels）、プレイ状態（controller）
-  ui/       画面と盤面の描画（board_painter, art, scene）、世界観の部品（widgets, paper, ink_icons）
+  ui/       画面（title / stage_select / game / settings / how_to_play）
+            盤面の描画（board_painter, art, scene）、店内の背景（backdrop）
+            店の中の操作部品（world_controls：木札・お盆の十字キー・提灯・黒板）
+            共通部品（widgets, paper, ink_icons）
   app/      テーマ、文言（日英）、設定、進行データ
   audio/    効果音と BGM
 tool/
@@ -47,6 +50,10 @@ tool/
 ```
 
 `lib/game/` は Flutter に依存しない純粋な Dart なので、`dart run tool/...` で直接使えます。
+
+## 自動ビルド
+
+`.github/workflows/tsumiage_demae.yml` が push のたびに解析・テストを行い、Android（APK、デバッグ鍵で署名）と iOS（署名なし）をビルドします。APK は Actions の成果物からダウンロードして実機に入れられます。
 
 ## ライセンス
 
