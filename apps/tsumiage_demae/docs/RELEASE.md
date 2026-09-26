@@ -72,15 +72,16 @@ python3 tool/make_audio.py   # 効果音と BGM（外部素材なし）
 
 ## ストア掲載用の素材
 
-- アイコン: `store/icon-512.png`
-- スクリーンショット: 実機かシミュレータで、タイトル・ゲーム中・クリア・ステージ選択を撮影
-- 説明文の例
+すべて `store/` にあります。
 
-  > 料理の上を通ると、頭の上に積み上がる。お客さんには、一番上の料理しか渡せない。
-  > どの順番で拾えば、全員に届けられる？
-  > ・全46ステージ。返却口、くるりトレイ、一方通行のしかけ
-  > ・何度でも1手戻せる。困ったらヒント
-  > ・広告なし、通信なし、オフラインで遊べます
+| 素材 | ファイル | 作り直し方 |
+| --- | --- | --- |
+| スクリーンショット（iPhone 1290×2796、Android 1080×1920、日英各6枚） | `store/screenshots/{ios,android}/{ja,en}/` | Web版をビルドして配信し `node tool/make_store_screens.js` |
+| Play のフィーチャーグラフィック（1024×500） | `store/feature-graphic-{ja,en}.png` | 同上 |
+| アイコン（Play 用 512×512） | `store/icon-512.png` | `node tool/make_icons.js` |
+| 掲載文（アプリ名・サブタイトル・説明文・キーワードなど） | `store/listing.md` | 文字数は `python3 tool/check_listing.py` で確認 |
+| プライバシーポリシー | `store/privacy-policy.html` | 開発者名と連絡先を埋めて公開する |
+| プライバシー申告・年齢レーティングの回答 | `store/declarations.md` | — |
 
 ## プライバシー
 

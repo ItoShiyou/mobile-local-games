@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../app/scope.dart';
@@ -30,6 +31,27 @@ class TitleScreen extends StatefulWidget {
 
 class _TitleScreenState extends State<TitleScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _t = AnimationController(vsync: this, duration: const Duration(seconds: 6));
+
+  @override
+  void initState() {
+    super.initState();
+    // Web only, for tool/make_store_screens.js: `?open=stages` or
+    // `?open=<stage id>` goes straight to that screen.
+    if (kIsWeb) {
+      final target = Uri.base.queryParameters['open'];
+      if (target != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          final nav = Navigator.of(context);
+          if (target == 'stages') {
+            nav.push(StageSelectScreen.route());
+          } else if (levelById(target) case final level?) {
+            nav.push(GameScreen.route(level));
+          }
+        });
+      }
+    }
+  }
 
   @override
   void didChangeDependencies() {
