@@ -17,7 +17,16 @@ Future<void> main() async {
     yield LicenseEntryWithLineBreaks(['Yusei Magic'], yusei);
   });
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  final prefs = await SharedPreferences.getInstance();
+  SharedPreferences prefs;
+  try {
+    prefs = await SharedPreferences.getInstance();
+  } catch (_) {
+    // Storage can be unavailable (e.g. a browser with site data blocked):
+    // play on with progress kept in memory for this session only.
+    // ignore: invalid_use_of_visible_for_testing_member
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+  }
   runApp(TsumiageApp(
     settings: Settings(prefs),
     progress: Progress(prefs),
