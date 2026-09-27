@@ -441,65 +441,6 @@ class _ChalkPainter extends CustomPainter {
   bool shouldRepaint(_ChalkPainter o) => o.pal != pal;
 }
 
-/// Speech bubble with a hand-drawn edge. The tail points down-left, at the
-/// speaker below.
-class SpeechBubble extends StatelessWidget {
-  const SpeechBubble({super.key, required this.child, this.tailX = .18, this.tailFromLeft, this.tailFromRight, this.warn = false});
-  final Widget child;
-
-  /// Where the tail sits: a fraction of the width, or a distance in pixels
-  /// from the left or right edge.
-  final double tailX;
-  final double? tailFromLeft;
-  final double? tailFromRight;
-  final bool warn;
-
-  @override
-  Widget build(BuildContext context) {
-    final pal = context.palette;
-    return CustomPaint(
-      painter: _BubblePainter(pal, tailX, warn, tailFromLeft, tailFromRight),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 9, 14, 19),
-        child: DefaultTextStyle(style: const TextStyle(fontFamily: fontFamily, color: kInk, fontWeight: FontWeight.w700, fontSize: 14.5), child: child),
-      ),
-    );
-  }
-}
-
-class _BubblePainter extends CustomPainter {
-  _BubblePainter(this.pal, this.tailX, this.warn, this.fromLeft, this.fromRight);
-  final Palette pal;
-  final double tailX;
-  final bool warn;
-  final double? fromLeft, fromRight;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final body = Rect.fromLTWH(1, 1, size.width - 2, size.height - 12);
-    final tx = (fromLeft ?? (fromRight != null ? size.width - fromRight! : size.width * tailX)).clamp(20.0, size.width - 20);
-    final shape = Path.combine(
-      PathOperation.union,
-      Path()..addRRect(RRect.fromRectAndRadius(body, const Radius.circular(16))),
-      Path()
-        ..moveTo(tx - 8, body.bottom - 2)
-        ..lineTo(tx - 12, size.height - 1)
-        ..lineTo(tx + 8, body.bottom - 2)
-        ..close(),
-    );
-    final path = Wob.around(shape, seed: 21, amp: .8);
-    canvas.drawPath(path.shift(const Offset(0, 2)), Paint()..color = const Color(0x2A000000));
-    canvas.drawPath(path, Paint()..color = const Color(0xFFFFFBF1));
-    canvas.drawPath(path, Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = warn ? 2.4 : 1.8
-      ..color = warn ? pal.shu : kInk);
-  }
-
-  @override
-  bool shouldRepaint(_BubblePainter o) => o.warn != warn || o.tailX != tailX || o.fromLeft != fromLeft || o.fromRight != fromRight || o.pal != pal;
-}
-
 // ======================================================================
 // Settings controls
 // ======================================================================

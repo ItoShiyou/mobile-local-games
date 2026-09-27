@@ -60,9 +60,9 @@ class _BackdropPainter extends CustomPainter {
         }
         canvas.drawRect(Rect.fromLTWH(0, tiles.top - 6, w, 8), Art.fill(sc.wallTrim));
       case WallKind.brick:
-        canvas.drawRect(r, Art.fill(const Color(0xFFA9624A)));
+        canvas.drawRect(r, Art.fill(const Color(0xFFC07A5C)));
         const bh = 18.0, bw = 44.0;
-        final mortar = Art.stroke(const Color(0xFFD9B9A0), 2);
+        final mortar = Art.stroke(const Color(0xFFE6CDB6), 2);
         for (var row = 0; row * bh < h; row++) {
           final y = row * bh;
           canvas.drawLine(Offset(0, y), Offset(w, y), mortar);

@@ -71,6 +71,9 @@ class _TsumiageAppState extends State<TsumiageApp> with WidgetsBindingObserver {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          // Text is part of painted signs, tags and tickets that have a fixed
+          // size, so larger system text is honoured only up to a point.
+          builder: (context, child) => MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: child!),
           home: const TitleScreen(),
         ),
       ),

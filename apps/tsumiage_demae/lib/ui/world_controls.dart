@@ -312,9 +312,12 @@ class _LanternButtonState extends State<LanternButton> {
                   padding: EdgeInsets.only(top: widget.height * .28, bottom: widget.height * .16),
                   child: Center(
                     child: ja
-                        ? Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [for (final ch in widget.label.characters) Text(ch, style: display(13, kInk, height: 1))],
+                        ? FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [for (final ch in widget.label.characters) Text(ch, style: display(13, kInk, height: 1))],
+                            ),
                           )
                         : FittedBox(child: Text(widget.label, style: display(12.5, kInk))),
                   ),

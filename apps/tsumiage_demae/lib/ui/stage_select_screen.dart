@@ -149,10 +149,22 @@ class _ShopWall extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
               child: Row(
                 children: [
-                  Text(s.chapterLabel(chapter.number), style: display(14, pal.onNoren.withValues(alpha: .8))),
+                  Flexible(
+                    flex: 2,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(s.chapterLabel(chapter.number), style: display(14, pal.onNoren.withValues(alpha: .8))),
+                    ),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(chapter.title(lang), maxLines: 1, overflow: TextOverflow.ellipsis, style: display(24, pal.onNoren))),
-                  Text(s.clearedCount(cleared, chapter.levels.length), style: display(13, pal.onNoren.withValues(alpha: .8))),
+                  Expanded(flex: 5, child: Text(chapter.title(lang), maxLines: 1, overflow: TextOverflow.ellipsis, style: display(24, pal.onNoren))),
+                  Flexible(
+                    flex: 2,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(s.clearedCount(cleared, chapter.levels.length), style: display(13, pal.onNoren.withValues(alpha: .8))),
+                    ),
+                  ),
                 ],
               ),
             ),
