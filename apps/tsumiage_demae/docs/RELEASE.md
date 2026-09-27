@@ -44,6 +44,21 @@ flutter test
    # build/app/outputs/bundle/release/app-release.aab を Play Console へ
    ```
 
+   GitHub Actions でも作れます（手元に Android SDK がなくてよい）。リポジトリの
+   Settings → Secrets and variables → Actions に次の4つを登録し、Actions タブで
+   「tsumiage_demae release」を実行するか、`tsumiage-v1.0.0` のようなタグを push します。
+
+   | シークレット | 中身 |
+   | --- | --- |
+   | `TSUMIAGE_UPLOAD_KEYSTORE_BASE64` | `base64 -w0 ~/tsumiage-upload.jks` の出力（mac は `base64 -i ~/tsumiage-upload.jks`） |
+   | `TSUMIAGE_UPLOAD_STORE_PASSWORD` | キーストアのパスワード |
+   | `TSUMIAGE_UPLOAD_KEY_PASSWORD` | 鍵のパスワード |
+   | `TSUMIAGE_UPLOAD_KEY_ALIAS` | `upload` |
+
+   署名済みの `tsumiage_demae-aab` がアーティファクトとして残ります。ビルド番号は実行番号で自動的に増えます。
+   シークレットがないときは、デバッグ署名のまま進まないように失敗します。
+   Play Console では「Play アプリ署名」を有効にしたまま、この AAB を内部テストに上げてから製品版へ進めます。
+
 - アプリ ID: `io.github.itoshiyou.tsumiage_demae`（公開後は変更不可。変える場合は公開前に
   `android/app/build.gradle.kts` の `applicationId` と `namespace`、`MainActivity.kt` のパッケージを変更）
 - アプリ名: 日本語「つみあげ出前」、英語「Stack & Deliver」（`res/values*/strings.xml`）
@@ -90,9 +105,27 @@ App Store の App Privacy は「データを収集しない」、Google Play の
 
 ## 公開前チェックリスト
 
-- [ ] `flutter analyze` と `flutter test` が通る
+### 開発側（済）
+
+- [x] `flutter analyze` と `flutter test` が通る（CI でも Android / iOS のビルドまで確認）
+- [x] 全46面が解けること・目標手数が最短であることをテストで確認
+- [x] 小さい画面（320×568）〜タブレット（820×1180）で全章のレイアウトを確認
+- [x] 端末の文字サイズ最大（アプリ内では1.3倍まで反映）で全画面がはみ出さない
+- [x] 日本語／英語、昼／夜、動きを減らす、読み上げ
+- [x] ストア用スクリーンショット・フィーチャーグラフィック・掲載文・申告内容
+
+### 持ち主が行うこと
+
+- [ ] 開発者名と連絡先メールを決め、`store/privacy-policy.html` と `store/listing.md` の（開発者名）を埋める
+- [ ] プライバシーポリシーを公開URLに置く（GitHub Pages、個人サイトなど。App Store と Play の両方で必須）
+- [ ] サポートURL（App Store 必須。問い合わせ先が書かれたページで可）
+- [ ] Google Play デベロッパー登録、アップロード鍵の作成と上記シークレットの登録
+- [ ] Apple Developer Program 登録、Xcode で Team を設定して `flutter build ipa`
+- [ ] 実機での最終確認（以下）
+
+#### 実機での最終確認
+
 - [ ] Android 実機・iOS 実機で、音（マナーモード時は無音）、振動、バックグラウンド復帰時のBGMを確認
-- [ ] 小さい画面（iPhone SE）と大きい画面（タブレット）でレイアウトを確認
-- [ ] 端末の文字サイズを最大にして、はみ出しがないか確認
+- [ ] 小さい画面（iPhone SE）とタブレットで見た目を確認
 - [ ] ダークモード、英語表示を確認
 - [ ] 1面から最終面まで通しでプレイ

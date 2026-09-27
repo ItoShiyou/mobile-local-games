@@ -38,7 +38,8 @@ function progressUpTo(upTo) {
 const shots = [
   { name: '01', progress: 'b05', open: null, keys: [], wait: 4200,
     ja: '頭の上に積んで、\n順番どおりにお届け', en: 'Stack it on your head,\nserve it in order' },
-  { name: '02', progress: 'b10', open: 'b09', keys: ['ArrowDown', 'ArrowLeft', 'ArrowLeft', 'ArrowDown'], wait: 900,
+  // a wrong serve: the dishes on top lift and the wanted one glows (held still with reduced motion)
+  { name: '02', progress: 'b05', open: 'b04', keys: ['ArrowLeft', 'ArrowLeft', 'ArrowLeft', 'ArrowDown'], wait: 900, still: true,
     ja: '通れば拾う。\n渡せるのはいちばん上だけ', en: 'Pick up what you walk over.\nServe only the top dish' },
   { name: '03', progress: 'm09', open: 'm09', keys: ['ArrowDown', 'ArrowUp', 'ArrowRight', 'h'], wait: 700,
     ja: '困ったら提灯をともして\n足あとヒント', en: 'Stuck? Light the lantern\nfor a paw-print hint' },
@@ -55,6 +56,7 @@ async function capture(browser, dev, lang, shot) {
     viewport: { width: dev.w, height: dev.h },
     deviceScaleFactor: dev.dpr,
     colorScheme: shot.dark ? 'dark' : 'light',
+    reducedMotion: shot.still ? 'reduce' : 'no-preference',
     locale: lang === 'ja' ? 'ja-JP' : 'en-US',
   });
   await page.goto(URL);
