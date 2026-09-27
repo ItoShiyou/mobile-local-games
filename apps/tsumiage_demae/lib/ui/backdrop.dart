@@ -39,12 +39,12 @@ class _BackdropPainter extends CustomPainter {
     final w = size.width, h = size.height;
     switch (sc.wall) {
       case WallKind.plaster:
-        canvas.drawRect(r, Art.fill(const Color(0xFFEFE3CC)));
+        canvas.drawRect(r, Art.fill(const Color(0xFFFAF1DE)));
         // wooden posts and a lintel beam
         for (final x in [w * .02, w * .98]) {
           canvas.drawRect(Rect.fromCenter(center: Offset(x, h / 2), width: 18, height: h), Art.fill(sc.wallTrim));
         }
-        _wainscot(canvas, Rect.fromLTWH(0, h * .74, w, h * .26), const Color(0xFFB88A5C), vertical: true);
+        _wainscot(canvas, Rect.fromLTWH(0, h * .74, w, h * .26), const Color(0xFFD9B283), vertical: true);
         canvas.drawRect(Rect.fromLTWH(0, h * .735, w, 10), Art.fill(sc.wallTrim));
       case WallKind.tiles:
         canvas.drawRect(r, Art.fill(const Color(0xFFEDE4D0)));

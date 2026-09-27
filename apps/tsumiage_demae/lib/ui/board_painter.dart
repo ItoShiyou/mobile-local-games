@@ -85,6 +85,7 @@ class SceneLayers {
     final canvas = Canvas(rec);
     _paintRoomShadow(canvas, b, u);
     _paintFloor(canvas, b, u, sc);
+    if (sc.sunny && !night) _paintSunlight(canvas, b, u);
     _paintShadows(canvas, b, u);
     _paintWalls(canvas, b, u, sc, pal, lightsAt, night);
     _paintFixtures(canvas, b, u);
@@ -185,6 +186,46 @@ class SceneLayers {
           final o = Offset(rnd.nextDouble() * all.width, rnd.nextDouble() * all.height);
           c.drawCircle(o, u * (.01 + rnd.nextDouble() * .025), Art.fill((rnd.nextBool() ? sc.floorB : sc.floorLine).withValues(alpha: .6)));
         }
+    }
+    c.restore();
+  }
+
+  /// Soft patches of daylight slanting in from the windows.
+  static void _paintSunlight(Canvas c, Board b, double u) {
+    final floor = Path();
+    for (var y = 0; y < b.height; y++) {
+      for (var x = 0; x < b.width; x++) {
+        if (!_isWall(b, x, y)) floor.addRect(Rect.fromLTWH(x * u, y * u, u + .5, u + .5));
+      }
+    }
+    final all = Rect.fromLTWH(0, 0, b.width * u, b.height * u);
+    c.save();
+    c.clipPath(floor);
+    // the whole room a touch warmer and brighter near the windows
+    c.drawRect(
+        all,
+        Paint()
+          ..blendMode = BlendMode.screen
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0x40FFF1CC), Color(0x14FFF1CC), Color(0x00FFF1CC)],
+          ).createShader(all));
+    // slanted window panes of light
+    final pane = Paint()
+      ..blendMode = BlendMode.screen
+      ..color = const Color(0x38FFF6DC)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, u * .12);
+    final slope = u * .7;
+    for (var k = 0; k * u * 2.6 < all.width + all.height; k++) {
+      final x0 = u * .8 + k * u * 2.6;
+      final path = Path()
+        ..moveTo(x0, 0)
+        ..lineTo(x0 + u * 1.1, 0)
+        ..lineTo(x0 + u * 1.1 - all.height / u * slope, all.height)
+        ..lineTo(x0 - all.height / u * slope, all.height)
+        ..close();
+      c.drawPath(path, pane);
     }
     c.restore();
   }
@@ -359,7 +400,7 @@ class SceneLayers {
       }
     }
     c.drawPath(room.shift(Offset(0, u * .18)), Paint()
-      ..color = const Color(0x55201008)
+      ..color = const Color(0x40201008)
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, u * .3));
   }
 

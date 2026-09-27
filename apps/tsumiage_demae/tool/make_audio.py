@@ -45,9 +45,21 @@ def add_noise(b, t0, dur, amp, decay, lp=0.3):
             b[n0 + i] += amp * y * math.exp(-t / decay) * min(1.0, (int(dur * SR) - i) / (SR * .004))
 
 
-def save(name, b, gain=0.9):
+def lowpass(b, cutoff, passes=2):
+    """Gentle one-pole low-pass: rounds off the bright edges that tire the ear."""
+    a = 1 - math.exp(-2 * math.pi * cutoff / SR)
+    for _ in range(passes):
+        y = 0.0
+        for i, x in enumerate(b):
+            y += a * (x - y)
+            b[i] = y
+    return b
+
+
+def save(name, b, gain=0.9, cutoff=2600):
+    lowpass(b, cutoff)
     peak = max(1e-9, max(abs(x) for x in b))
-    k = gain / peak if peak > gain else 1.0
+    k = gain / peak
     with wave.open(os.path.join(OUT, name + '.wav'), 'wb') as w:
         w.setnchannels(1)
         w.setsampwidth(2)
@@ -55,26 +67,30 @@ def save(name, b, gain=0.9):
         w.writeframes(b''.join(struct.pack('<h', int(max(-1, min(1, x * k)) * 32000)) for x in b))
 
 
-BELL = ((1, 1.0), (2, 0.35), (3.01, 0.12), (4.2, 0.05))
-SOFT = ((1, 1.0), (2, 0.15))
+# Warm timbres only: a wooden marimba-ish tone and a felt-piano-ish tone.
+# No inharmonic bell partials, which are what made the old sounds shrill.
+WOOD = ((1, 1.0), (4, 0.06))
+FELT = ((1, 1.0), (2, 0.18), (3, 0.04))
+PURE = ((1, 1.0),)
 
 def note(m):
     return 440.0 * 2 ** ((m - 69) / 12)
 
-# --- effects ---------------------------------------------------------------
-b = buf(.07); add_noise(b, 0, .06, .35, .012, .25); add_tone(b, 0, 180, .06, .25, decay=.015); save('step', b, .45)
-b = buf(.16); add_tone(b, 0, 620, .14, .6, decay=.05, harm=SOFT, sweep=980); save('pickup', b, .7)
-b = buf(.6); add_tone(b, 0, note(84), .5, .5, decay=.15, harm=BELL); add_tone(b, .09, note(88), .5, .5, decay=.18, harm=BELL); save('serve', b, .75)
-b = buf(.22); add_tone(b, 0, 420, .2, .6, decay=.06, harm=SOFT, sweep=190); add_noise(b, .02, .1, .2, .03); save('drop', b, .7)
-b = buf(.3); add_noise(b, 0, .26, .5, .12, .08); add_tone(b, .02, 500, .24, .3, decay=.1, harm=SOFT, sweep=900); add_tone(b, .12, 900, .14, .25, decay=.06, harm=SOFT, sweep=520); save('flip', b, .6)
-b = buf(.12); add_tone(b, 0, 120, .11, .8, decay=.035, harm=((1, 1), (2, .3))); add_noise(b, 0, .05, .2, .015, .15); save('bump', b, .6)
-b = buf(1.6)
-for k, m in enumerate([72, 76, 79, 84]):
-    add_tone(b, k * .11, note(m), 1.2, .45, decay=.35, harm=BELL)
-add_tone(b, .44, note(88), 1.1, .35, decay=.4, harm=BELL); add_tone(b, .44, note(60), 1.1, .25, decay=.5, harm=SOFT)
-save('clear', b, .8)
-b = buf(.1); add_tone(b, 0, 760, .08, .5, decay=.03, harm=SOFT, sweep=520); save('undo', b, .5)
-b = buf(.04); add_tone(b, 0, 1250, .03, .5, decay=.008); save('tap', b, .35)
+# --- effects -----------------------------------------------------------------
+# Peaks stay low (0.12-0.35) so frequent sounds sit well under the music.
+b = buf(.08); add_tone(b, 0, 150, .07, .6, attack=.006, decay=.018, harm=PURE); add_noise(b, 0, .05, .12, .01, .12); save('step', b, .12, 900)
+b = buf(.2); add_tone(b, 0, note(67), .18, .6, attack=.006, decay=.06, harm=WOOD); add_tone(b, .045, note(72), .15, .45, attack=.006, decay=.05, harm=WOOD); save('pickup', b, .28, 2000)
+b = buf(.7); add_tone(b, 0, note(72), .6, .5, attack=.008, decay=.18, harm=FELT); add_tone(b, .1, note(76), .6, .5, attack=.008, decay=.22, harm=FELT); save('serve', b, .32, 2200)
+b = buf(.22); add_tone(b, 0, note(64), .2, .6, attack=.006, decay=.06, harm=WOOD, sweep=note(57)); save('drop', b, .25, 1600)
+b = buf(.32); add_noise(b, 0, .26, .3, .09, .05); add_tone(b, .03, note(67), .2, .35, attack=.01, decay=.07, harm=WOOD); add_tone(b, .12, note(64), .18, .3, attack=.01, decay=.06, harm=WOOD); save('flip', b, .24, 1600)
+b = buf(.14); add_tone(b, 0, 110, .13, .8, attack=.008, decay=.04, harm=PURE); save('bump', b, .3, 700)
+b = buf(1.8)
+for k, m in enumerate([60, 64, 67, 72]):
+    add_tone(b, k * .13, note(m), 1.3, .45, attack=.01, decay=.4, harm=FELT)
+add_tone(b, .52, note(76), 1.2, .3, attack=.012, decay=.45, harm=FELT); add_tone(b, .52, note(48), 1.2, .3, attack=.02, decay=.55, harm=PURE)
+save('clear', b, .35, 2200)
+b = buf(.12); add_tone(b, 0, note(69), .1, .5, attack=.006, decay=.03, harm=WOOD, sweep=note(64)); save('undo', b, .18, 1600)
+b = buf(.06); add_tone(b, 0, note(74), .05, .5, attack=.004, decay=.014, harm=WOOD); save('tap', b, .14, 1800)
 
 # --- background music: a slow music-box loop (seamless) -----------------------
 BPM = 76
@@ -97,11 +113,11 @@ melody = [
 for bar in range(bars):
     t0 = bar * 4 * beat
     for m in chords[bar]:
-        add_tone(b, t0, note(m), 4 * beat, .07, attack=.35, decay=3.0, harm=SOFT, wrap=True)
+        add_tone(b, t0, note(m), 4 * beat, .06, attack=.35, decay=3.0, harm=PURE, wrap=True)
     for k in range(4):  # soft arpeggio
         m = chords[bar][k % 3] + 12
-        add_tone(b, t0 + k * beat + beat / 2, note(m), 1.2, .05, decay=.35, harm=BELL, wrap=True)
+        add_tone(b, t0 + k * beat + beat / 2, note(m - 12), 1.2, .045, attack=.02, decay=.35, harm=FELT, wrap=True)
     for (at, m, d) in melody[bar]:
-        add_tone(b, t0 + at * beat, note(m), max(1.4, d * beat + .8), .16, decay=.45 + d * .15, harm=BELL, wrap=True)
-save('bgm', b, .55)
+        add_tone(b, t0 + at * beat, note(m - 12), max(1.4, d * beat + .8), .16, attack=.015, decay=.45 + d * .15, harm=FELT, wrap=True)
+save('bgm', b, .5, 1500)
 print('ok')

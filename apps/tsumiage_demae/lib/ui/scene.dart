@@ -41,6 +41,7 @@ class Scene {
     required this.outside,
     required this.decor,
     this.alwaysNight = false,
+    this.sunny = false,
   });
 
   final String id;
@@ -53,20 +54,25 @@ class Scene {
   final Color outside;
   final List<Decor> decor;
   final bool alwaysNight;
+
+  /// Daylight falls through the windows onto the floor.
+  final bool sunny;
 }
 
 const _diner = Scene(
   id: 'diner',
   floor: FloorKind.planks,
   wall: WallKind.plaster,
-  floorA: Color(0xFFD9B283),
-  floorB: Color(0xFFCFA575),
-  floorLine: Color(0xFFA57A4C),
-  wallTop: Color(0xFF8C6B50),
-  wallFront: Color(0xFFEADBBE),
-  wallTrim: Color(0xFF8A5E3B),
-  outside: Color(0xFF6B5343),
+  // pale hinoki boards and warm plaster: a bright lunchtime room
+  floorA: Color(0xFFF0D6A8),
+  floorB: Color(0xFFE8CA98),
+  floorLine: Color(0xFFC39A68),
+  wallTop: Color(0xFFD2AE82),
+  wallFront: Color(0xFFFAF1DD),
+  wallTrim: Color(0xFFB07C4C),
+  outside: Color(0xFFC49C72),
   decor: [Decor.tanzaku, Decor.window, Decor.shelf, Decor.plant, Decor.clock, Decor.tanzaku],
+  sunny: true,
 );
 
 const _teishoku = Scene(

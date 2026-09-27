@@ -61,7 +61,7 @@ class PluginSound implements Sound {
       }
       final bgm = AudioPlayer();
       await bgm.setReleaseMode(ReleaseMode.loop);
-      await bgm.setVolume(0.32);
+      await bgm.setVolume(0.24);
       await bgm.setSource(AssetSource('audio/bgm.wav'));
       _bgm = bgm;
       _ready = true;
