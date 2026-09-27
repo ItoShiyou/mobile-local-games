@@ -138,5 +138,25 @@ void main() {
       c.undo();
       expect(c.stuck, isFalse);
     });
+
+    test('a dead end is only pointed out after the player runs into it', () {
+      final level = Level(id: 'x', ja: '', en: '', par: 0, map: ['#######', '#Pab.A#', '#.....#', '#######']);
+      final c = GameController(level);
+      c.move(Dir.right);
+      c.move(Dir.right);
+      expect(c.stuck, isTrue);
+      expect(c.beckonUndo, isFalse, reason: 'walking into a dead end is not announced');
+      c.move(Dir.right);
+      c.move(Dir.right);
+      expect(c.bump?.reason, Blocked.wrongDish);
+      expect(c.bump?.wanted, 'a');
+      expect(c.beckonUndo, isTrue);
+      c.undo();
+      expect(c.beckonUndo, isTrue, reason: 'still stuck one move back');
+      c.undo();
+      c.undo();
+      expect(c.stuck, isFalse);
+      expect(c.beckonUndo, isFalse);
+    });
   });
 }

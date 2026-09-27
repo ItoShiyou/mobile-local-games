@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 import '../app/progress.dart';
@@ -39,9 +39,6 @@ class _GameScreenState extends State<GameScreen> {
 
   late GameController _c;
   final _focus = FocusNode(debugLabel: 'game');
-  String? _say;
-  Timer? _sayTimer;
-  Timer? _greetTimer;
   bool _resultShown = false;
   bool _newBest = false;
   int _stars = 0;
@@ -56,10 +53,6 @@ class _GameScreenState extends State<GameScreen> {
       if (!mounted) return;
       AppScope.read(context).progress.markPlayed(level);
       await _maybeShowIntro();
-      if (!mounted) return;
-      _greetTimer = Timer(const Duration(milliseconds: 500), () {
-        if (mounted && _c.moves == 0) _speak(Strings.of(context).greeting, ms: 1800);
-      });
     });
   }
 
@@ -68,8 +61,6 @@ class _GameScreenState extends State<GameScreen> {
     _c.removeListener(_onGame);
     _c.dispose();
     _focus.dispose();
-    _sayTimer?.cancel();
-    _greetTimer?.cancel();
     super.dispose();
   }
 
@@ -77,7 +68,6 @@ class _GameScreenState extends State<GameScreen> {
     if (_c.isWon && !_resultShown) {
       final scope = AppScope.read(context);
       _resultShown = true;
-      _say = null;
       _newBest = scope.progress.recordClear(level, _c.moves);
       _stars = starsFor(level, _c.moves);
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -99,12 +89,11 @@ class _GameScreenState extends State<GameScreen> {
     progress.markIntroSeen(g);
   }
 
-  void _speak(String text, {int ms = 1600}) {
-    _sayTimer?.cancel();
-    setState(() => _say = text);
-    _sayTimer = Timer(Duration(milliseconds: ms), () {
-      if (mounted) setState(() => _say = null);
-    });
+  /// Nothing is written on screen during play: the board shows what went
+  /// wrong. Screen readers still hear it.
+  void _announce(String text) {
+    if (text.isEmpty) return;
+    SemanticsService.sendAnnouncement(View.of(context), text, Directionality.of(context));
   }
 
   void _move(Dir d) {
@@ -116,13 +105,10 @@ class _GameScreenState extends State<GameScreen> {
       scope.sound.play(Sfx.bump);
       if (haptic) HapticFeedback.lightImpact();
       final b = _c.bump;
-      if (b != null) {
-        final msg = Strings.of(context).blocked(b.reason, wanted: b.wanted);
-        if (msg.isNotEmpty) _speak(msg);
-      }
+      if (b != null) _announce(Strings.of(context).blocked(b.reason, wanted: b.wanted));
+      if (_c.beckonUndo) _announce('${Strings.of(context).stuckTitle} ${Strings.of(context).stuckBody}');
       return;
     }
-    if (_say != null && _c.hint == null) setState(() => _say = null);
     final ev = r.events;
     if (ev.any((e) => e is Served)) {
       scope.sound.play(Sfx.serve);
@@ -154,7 +140,8 @@ class _GameScreenState extends State<GameScreen> {
 
   void _hint() {
     final d = _c.showHint();
-    if (d != null) _speak(Strings.of(context).hintArrow(d), ms: 2200);
+    final s = Strings.of(context);
+    _announce(d != null ? s.hintArrow(d) : '${s.stuckTitle} ${s.stuckBody}');
   }
 
   void _next() {
@@ -255,18 +242,6 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _boardArea(BuildContext context, Strings s, Scene scene, bool reduce, GameState st) {
     return LayoutBuilder(builder: (context, box) {
-      final b = level.board;
-      final inner = Size(box.maxWidth - _frame * 2, box.maxHeight - _frame * 2);
-      final u = cellSizeFor(b, inner, _maxCell);
-      final bw = u * b.width, bh = u * b.height;
-      final ox = (box.maxWidth - bw) / 2, oy = (box.maxHeight - bh) / 2;
-      // where the courier's head is, for the speech bubble
-      final catX = ox + (st.pos.x + .5) * u;
-      final catTop = oy + st.pos.y * u - u * (.1 + st.stack.length * .16);
-      final bubbleW = math.min(240.0, box.maxWidth);
-      final bubbleLeft = (catX - 44).clamp(0.0, math.max(0.0, box.maxWidth - bubbleW)).toDouble();
-      final bubbleBottom = (box.maxHeight - catTop).clamp(0.0, math.max(0.0, box.maxHeight - 70)).toDouble();
-      final tailX = ((catX - bubbleLeft) / bubbleW).clamp(.1, .9);
       return Stack(
         clipBehavior: Clip.none,
         children: [
@@ -283,51 +258,6 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           ),
-          if (_c.stuck && !_c.isWon)
-            Positioned(
-              left: bubbleLeft,
-              bottom: bubbleBottom,
-              width: bubbleW,
-              child: SpeechBubble(
-                warn: true,
-                tailX: tailX,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(s.stuckTitle),
-                    const SizedBox(height: 2),
-                    Text(s.stuckBody, style: TextStyle(fontSize: 12.5, color: kInk.withValues(alpha: .7), fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 8),
-                    Row(children: [
-                      Expanded(child: WoodButton(small: true, kind: WoodKind.shu, glyph: InkGlyph.undo, label: s.undo, onPressed: _undo)),
-                      const SizedBox(width: 8),
-                      Expanded(child: WoodButton(small: true, glyph: InkGlyph.restart, label: s.restart, onPressed: _restart)),
-                    ]),
-                  ],
-                ),
-              ),
-            )
-          else if (_say != null && !_c.isWon)
-            // anchor the bubble on the side of the courier with more room
-            Positioned(
-              left: catX <= box.maxWidth / 2 ? math.max(0.0, catX - 34) : null,
-              right: catX > box.maxWidth / 2 ? math.max(0.0, box.maxWidth - catX - 34) : null,
-              bottom: bubbleBottom,
-              child: IgnorePointer(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: bubbleW),
-                  child: Semantics(
-                    liveRegion: true,
-                    child: SpeechBubble(
-                      tailFromLeft: catX <= box.maxWidth / 2 ? catX - math.max(0.0, catX - 34) : null,
-                      tailFromRight: catX > box.maxWidth / 2 ? (box.maxWidth - catX) - math.max(0.0, box.maxWidth - catX - 34) : null,
-                      child: Text(_say!),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           if (_c.isWon)
             Positioned(
               left: 4,
@@ -727,7 +657,15 @@ class _CounterBand extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(width: 6),
-                    HangingTag(label: s.undo, glyph: InkGlyph.undo, width: tagW, height: tagH, onPressed: c.canUndo ? onUndo : null, seed: 4),
+                    HangingTag(
+                      label: s.undo,
+                      glyph: InkGlyph.undo,
+                      width: tagW,
+                      height: tagH,
+                      onPressed: c.canUndo ? onUndo : null,
+                      beckon: c.beckonUndo,
+                      seed: 4,
+                    ),
                     const SizedBox(width: 6),
                     HangingTag(label: s.redo, glyph: InkGlyph.redo, width: tagW, height: tagH, onPressed: c.canRedo ? onRedo : null, seed: 5),
                     const SizedBox(width: 6),
@@ -746,7 +684,7 @@ class _CounterBand extends StatelessWidget {
                       lit: c.hint != null,
                       width: tagW + 10,
                       height: tagH + 10,
-                      onPressed: c.isWon || c.stuck ? null : onHint,
+                      onPressed: c.isWon ? null : onHint,
                     ),
                     const SizedBox(width: 6),
                   ],

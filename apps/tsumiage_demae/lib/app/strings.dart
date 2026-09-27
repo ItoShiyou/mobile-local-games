@@ -49,7 +49,6 @@ abstract class Strings {
   String get stuckTitle;
   String get stuckBody;
   String hintArrow(Dir d);
-  String get greeting;
 
   // Result
   String get clearTitle;
@@ -173,8 +172,6 @@ class StringsJa extends Strings {
   String get stuckBody => '1手戻すか、はじめからやり直そう';
   @override
   String hintArrow(Dir d) => 'つぎは${_dirJa(d)}かな？';
-  @override
-  String get greeting => 'いってきまーす！';
   @override
   String get clearTitle => '毎度あり！';
   @override
@@ -350,8 +347,6 @@ class StringsEn extends Strings {
   String get stuckBody => 'Undo a move, or start over';
   @override
   String hintArrow(Dir d) => 'Maybe ${_dirEn(d)}?';
-  @override
-  String get greeting => 'Off I go!';
   @override
   String get clearTitle => 'Thank you!';
   @override

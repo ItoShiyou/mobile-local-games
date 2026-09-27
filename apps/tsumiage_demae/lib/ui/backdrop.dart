@@ -119,7 +119,7 @@ class _BackdropPainter extends CustomPainter {
     PaperGrain.paint(canvas, r);
     if (night && sc.wall != WallKind.stalls && sc.wall != WallKind.fence) {
       canvas.drawRect(r, Paint()
-        ..color = const Color(0xFF5E6690)
+        ..color = const Color(0xFFB4AAB4)
         ..blendMode = BlendMode.multiply);
     }
     // lantern strings across the top at night / at the festival
@@ -220,7 +220,7 @@ class _DeskPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final r = Offset.zero & size;
-    final base = pal.night ? const Color(0xFF5A3E2A) : const Color(0xFFB98B5E);
+    final base = pal.night ? const Color(0xFF7A5A40) : const Color(0xFFCFA676);
     canvas.drawRect(r, Art.fill(base));
     const plank = 64.0;
     for (var y = 0.0, i = 0; y < size.height; y += plank, i++) {
@@ -239,7 +239,7 @@ class _DeskPainter extends CustomPainter {
     canvas.drawRect(
       r,
       Paint()
-        ..shader = const RadialGradient(colors: [Color(0x00000000), Color(0x55000000)], stops: [.6, 1], radius: 1).createShader(r),
+        ..shader = const RadialGradient(colors: [Color(0x00000000), Color(0x30000000)], stops: [.6, 1], radius: 1).createShader(r),
     );
   }
 
@@ -257,7 +257,7 @@ class BeamPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final r = Rect.fromLTWH(-4, 0, size.width + 8, height);
     canvas.drawRect(r.shift(const Offset(0, 4)), Art.fill(const Color(0x33000000)));
-    canvas.drawRect(r, Art.fill(pal.woodDark));
+    canvas.drawRect(r, Art.fill(Color.lerp(pal.woodDark, pal.wood, .35)!));
     canvas.drawLine(r.bottomLeft, r.bottomRight, Art.stroke(kInk, 2));
     canvas.drawLine(r.topLeft + const Offset(0, 5), r.topRight + const Offset(0, 5), Art.stroke(const Color(0x22FFFFFF), 1.5));
   }
@@ -278,7 +278,7 @@ class CounterPainter extends CustomPainter {
     final top = Rect.fromLTWH(-4, 0, w + 8, 26);
     final front = Rect.fromLTWH(-4, 26, w + 8, h - 26);
     canvas.drawRect(top.shift(const Offset(0, -5)), Art.fill(const Color(0x33000000)));
-    canvas.drawRect(front, Art.fill(pal.woodDark));
+    canvas.drawRect(front, Art.fill(Color.lerp(pal.woodDark, pal.wood, .45)!));
     for (var x = 0.0; x < w; x += 34) {
       canvas.drawLine(Offset(x, front.top), Offset(x, h), Art.stroke(const Color(0x33000000), 1.2));
     }

@@ -42,7 +42,7 @@
 
 ■ 何度でもやり直せる
 「戻す」は何回でも。困ったら提灯をともせば、次に進む方向に足あとが付きます。
-もう届けられない状態になったら、ねこが教えてくれます。
+手順をまちがえても、どの皿を先に拾いすぎたのかが盤面で分かります。
 
 ■ 判子を集めよう
 目標の手数で届けると判子が3つ。自分の最少手数も記録されます。
@@ -86,7 +86,7 @@ The last dish you pick up is always on top, so your route decides everything. A 
 A corner diner, a set-meal shop by the station, a hilltop café, the back alleys and a summer festival night – each with a new twist: return counters, flip trays and one-way lanes. Every stage is checked to be solvable, and its par is the true shortest solution.
 
 ■ Undo as often as you like
-Stuck? Light the lantern and paw prints show the way. The cat tells you when an order can no longer be delivered.
+Stuck? Light the lantern and paw prints show the way. Serve the wrong dish and you'll see exactly which plate went on too early.
 
 ■ Collect the stamps
 Deliver within par for three stamps. Your best move count is saved for every stage.

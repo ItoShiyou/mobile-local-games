@@ -101,7 +101,7 @@ class SceneLayers {
           r,
           Paint()
             ..blendMode = BlendMode.screen
-            ..shader = RadialGradient(colors: [pal.glow.withValues(alpha: .55), pal.glow.withValues(alpha: 0)]).createShader(rect),
+            ..shader = RadialGradient(colors: [pal.glow.withValues(alpha: .4), pal.glow.withValues(alpha: 0)]).createShader(rect),
         );
       }
     }
@@ -236,7 +236,7 @@ class SceneLayers {
         if (_isWall(b, x, y)) continue;
         if (_isWall(b, x, y - 1)) {
           final r = Rect.fromLTWH(x * u, y * u, u, u * .32);
-          c.drawRect(r, Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x40281810), Color(0x00281810)]).createShader(r));
+          c.drawRect(r, Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x2C281810), Color(0x00281810)]).createShader(r));
         }
         for (final sx in [-1, 1]) {
           if (_isWall(b, x + sx, y)) {
@@ -247,7 +247,7 @@ class SceneLayers {
                   ..shader = LinearGradient(
                     begin: sx < 0 ? Alignment.centerLeft : Alignment.centerRight,
                     end: sx < 0 ? Alignment.centerRight : Alignment.centerLeft,
-                    colors: const [Color(0x2A281810), Color(0x00281810)],
+                    colors: const [Color(0x1C281810), Color(0x00281810)],
                   ).createShader(r));
           }
         }
@@ -723,8 +723,31 @@ class BoardPainter {
       }
       canvas.restore();
     } else {
+      // After trying to serve the wrong dish, the dishes on top lift for a
+      // moment to show the one the guest wanted, glowing underneath: you can
+      // see for yourself that it went on too early.
+      var buried = -1;
+      if (bump != null && bump.reason == Blocked.wrongDish && f.bumpAge < 1.8) {
+        buried = shown.lastIndexOf(bump.wanted ?? '');
+      }
+      final age = f.bumpAge;
+      final reveal = age < .25
+          ? Curves.easeOutBack.transform(age / .25)
+          : age < 1.3
+              ? 1.0
+              : 1 - Curves.easeInOut.transform(((age - 1.3) / .5).clamp(0.0, 1.0));
       for (var k = 0; k < shown.length; k++) {
-        Art.stackDish(canvas, slot(k) + Offset(wobble * (k + 1), 0), du, shown[k], highlight: k == shown.length - 1 && shown.length > 1);
+        var at = slot(k) + Offset(wobble * (k + 1), 0);
+        if (buried >= 0 && k > buried) at += Offset(0, -u * .26 * reveal);
+        if (k == buried) {
+          canvas.drawCircle(
+              at + Offset(0, -u * .06),
+              u * .3,
+              Paint()
+                ..color = pal.glow.withValues(alpha: .9 * reveal.clamp(0.0, 1.0))
+                ..maskFilter = MaskFilter.blur(BlurStyle.normal, u * .09));
+        }
+        Art.stackDish(canvas, at, du, shown[k], highlight: k == shown.length - 1 && shown.length > 1);
       }
     }
 
@@ -767,7 +790,7 @@ class BoardPainter {
     // ---- evening light ----
     if (f.night) {
       canvas.drawRect(all.inflate(u), Paint()
-        ..color = const Color(0xFF8C93BA)
+        ..color = const Color(0xFFE6D8C8)
         ..blendMode = BlendMode.modulate);
     }
     PaperGrain.paint(canvas, all, opacity: .5);
@@ -780,7 +803,7 @@ class BoardPainter {
         u * 1.2,
         Paint()
           ..blendMode = BlendMode.screen
-          ..shader = RadialGradient(colors: [pal.glow.withValues(alpha: .28), pal.glow.withValues(alpha: 0)])
+          ..shader = RadialGradient(colors: [pal.glow.withValues(alpha: .2), pal.glow.withValues(alpha: 0)])
               .createShader(Rect.fromCircle(center: center, radius: u * 1.2)),
       );
     }

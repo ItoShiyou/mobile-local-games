@@ -49,6 +49,7 @@ class GameController extends ChangeNotifier {
   Bump? _bump;
   Dir? _hint;
   bool _stuck = false;
+  bool _noticed = false;
   int hintsUsed = 0;
 
   GameState get state => _history[_cursor];
@@ -56,6 +57,11 @@ class GameController extends ChangeNotifier {
   Bump? get bump => _bump;
   Dir? get hint => _hint;
   bool get stuck => _stuck;
+
+  /// The player has run into the dead end themselves (a failed move or a
+  /// hint asked for while stuck). Only then does the undo tag beckon: the
+  /// game never announces a dead end before the player can see it.
+  bool get beckonUndo => _stuck && _noticed && !isWon;
   bool get isWon => state.isWon;
   bool get canUndo => _cursor > 0;
   bool get canRedo => _cursor < _history.length - 1;
@@ -71,6 +77,7 @@ class GameController extends ChangeNotifier {
         final gi = board.guestAt(state.pos.x + d.dx, state.pos.y + d.dy);
         if (gi >= 0) wanted = board.guests[gi].wants;
         _bump = Bump(++_serial, d, r.blocked!, wanted: wanted);
+        if (_stuck) _noticed = true;
         notifyListeners();
       }
       return r;
@@ -116,6 +123,7 @@ class GameController extends ChangeNotifier {
     final path = _solver.solve(state);
     _hint = (path == null || path.isEmpty) ? null : path.first;
     _stuck = path == null;
+    if (_stuck) _noticed = true;
     if (_hint != null) hintsUsed++;
     notifyListeners();
     return _hint;
@@ -132,6 +140,7 @@ class GameController extends ChangeNotifier {
       _stuck = path == null;
       if (followHint && path != null && path.isNotEmpty) _hint = path.first;
     }
+    if (!_stuck) _noticed = false;
     notifyListeners();
   }
 }

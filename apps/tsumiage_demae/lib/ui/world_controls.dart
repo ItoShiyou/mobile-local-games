@@ -50,6 +50,68 @@ class _SwingState extends State<_Swing> with SingleTickerProviderStateMixin {
       );
 }
 
+/// A slow, repeating sway with a soft lantern-coloured halo.
+class _Beckon extends StatefulWidget {
+  const _Beckon({required this.on, required this.child});
+  final bool on;
+  final Widget child;
+
+  @override
+  State<_Beckon> createState() => _BeckonState();
+}
+
+class _BeckonState extends State<_Beckon> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.on) _c.repeat();
+  }
+
+  @override
+  void didUpdateWidget(_Beckon old) {
+    super.didUpdateWidget(old);
+    if (widget.on && !_c.isAnimating) _c.repeat();
+    if (!widget.on && _c.isAnimating) _c.stop();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.on) return widget.child;
+    final still = AppScope.read(context).settings.reduceMotion(context);
+    final glow = context.palette.glow;
+    return AnimatedBuilder(
+      animation: _c,
+      child: widget.child,
+      builder: (_, child) {
+        final t = _c.value;
+        // a short sway at the start of each cycle, then rest
+        final k = (t / .45).clamp(0.0, 1.0);
+        final a = still || k >= 1 ? 0.0 : math.sin(k * math.pi * 3) * (1 - k) * .14;
+        final halo = .6 + .3 * math.sin(t * math.pi * 2);
+        return Transform.rotate(
+          angle: a,
+          alignment: Alignment.topCenter,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [BoxShadow(color: glow.withValues(alpha: halo), blurRadius: 16, spreadRadius: 3)],
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+}
+
 enum TagWood { plain, dark, shu }
 
 /// A wooden tag hanging from a string. Tapping it swings it.
@@ -65,6 +127,7 @@ class HangingTag extends StatefulWidget {
     this.string = 8,
     this.wood = TagWood.plain,
     this.showLabel = true,
+    this.beckon = false,
     this.seed = 1,
   });
 
@@ -74,6 +137,10 @@ class HangingTag extends StatefulWidget {
   final double width, height, string;
   final TagWood wood;
   final bool showLabel;
+
+  /// Sways now and then with a warm edge, as if a draught caught it: the
+  /// shop's way of pointing at this tag without a word.
+  final bool beckon;
   final int seed;
 
   @override
@@ -122,23 +189,26 @@ class _HangingTagState extends State<HangingTag> {
             : null,
         child: _Swing(
           trigger: _taps,
-          child: Opacity(
-            opacity: enabled ? 1 : .45,
-            child: CustomPaint(
-              painter: _TagPainter(face, widget.string, widget.seed),
-              child: SizedBox(
-                width: widget.width,
-                height: widget.height + widget.string,
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(4, widget.string + 12, 4, 6),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // a Japanese label is the sign itself, written top to bottom
-                      if (widget.glyph != null && !verticalText) InkIcon(widget.glyph!, size: 20, color: fg),
-                      if (widget.glyph != null && widget.showLabel && !verticalText) const SizedBox(height: 2),
-                      Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: label())),
-                    ],
+          child: _Beckon(
+            on: widget.beckon && enabled,
+            child: Opacity(
+              opacity: enabled ? 1 : .45,
+              child: CustomPaint(
+                painter: _TagPainter(face, widget.string, widget.seed),
+                child: SizedBox(
+                  width: widget.width,
+                  height: widget.height + widget.string,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(4, widget.string + 12, 4, 6),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // a Japanese label is the sign itself, written top to bottom
+                        if (widget.glyph != null && !verticalText) InkIcon(widget.glyph!, size: 20, color: fg),
+                        if (widget.glyph != null && widget.showLabel && !verticalText) const SizedBox(height: 2),
+                        Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: label())),
+                      ],
+                    ),
                   ),
                 ),
               ),
