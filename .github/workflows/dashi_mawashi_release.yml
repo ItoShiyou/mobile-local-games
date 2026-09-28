@@ -1,0 +1,72 @@
+name: dashi_mawashi release
+
+# Builds the upload-ready Android App Bundle, signed with the upload key.
+# Run it from the Actions tab, or push a tag such as dashi-v1.0.0.
+#
+# Repository secrets (Settings > Secrets and variables > Actions):
+#   DASHI_UPLOAD_KEYSTORE_BASE64  base64 of the .jks file
+#   DASHI_UPLOAD_STORE_PASSWORD
+#   DASHI_UPLOAD_KEY_PASSWORD
+#   DASHI_UPLOAD_KEY_ALIAS        usually "upload"
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'dashi-v*'
+
+defaults:
+  run:
+    working-directory: apps/dashi_mawashi
+
+env:
+  FLUTTER_VERSION: '3.47.5'
+
+jobs:
+  android-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Write the upload key
+        env:
+          KEYSTORE: ${{ secrets.DASHI_UPLOAD_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.DASHI_UPLOAD_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.DASHI_UPLOAD_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.DASHI_UPLOAD_KEY_ALIAS }}
+        run: |
+          # never let a debug-signed bundle through
+          if [ -z "$KEYSTORE" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "::error::Upload key secrets are missing (see the top of this workflow and docs/RELEASE.md)."
+            exit 1
+          fi
+          echo "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          {
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "storeFile=$RUNNER_TEMP/upload.jks"
+          } > android/key.properties
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      # The build number must grow with every upload; the run number does.
+      - run: flutter build appbundle --release --build-number ${{ github.run_number }}
+      - name: Check the bundle is signed with the upload key
+        run: |
+          jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab | grep -q "CN=Android Debug" \
+            && { echo "::error::Bundle is debug-signed."; exit 1; } || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dashi_mawashi-aab
+          path: apps/dashi_mawashi/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+      - if: always()
+        run: rm -f android/key.properties "$RUNNER_TEMP/upload.jks"

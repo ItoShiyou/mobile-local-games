@@ -1,0 +1,71 @@
+name: dashi_mawashi
+
+on:
+  push:
+    paths:
+      - 'apps/dashi_mawashi/**'
+      - '.github/workflows/dashi_mawashi.yml'
+  pull_request:
+    paths:
+      - 'apps/dashi_mawashi/**'
+      - '.github/workflows/dashi_mawashi.yml'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: apps/dashi_mawashi
+
+env:
+  FLUTTER_VERSION: '3.47.5'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  android:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      # Without android/key.properties the release build is signed with the
+      # debug key: good enough to check that it builds and to install locally.
+      - run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dashi_mawashi-apk
+          path: apps/dashi_mawashi/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
+
+  ios:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      # Unsigned build: checks that the iOS project compiles.
+      - run: flutter build ios --release --no-codesign

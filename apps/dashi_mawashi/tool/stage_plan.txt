@@ -1,0 +1,41 @@
+# slot  options for tool/gen_levels.dart (one stage each)
+01 --w=4 --h=4 --trees=k --target=5 --min=3
+02 --w=4 --h=4 --trees=k --target=7 --min=4
+03 --w=4 --h=5 --trees=k --target=9 --min=6
+04 --w=5 --h=5 --trees=k,k --target=11 --min=7
+05 --w=5 --h=5 --trees=k --walls=1 --target=12 --min=8
+06 --w=5 --h=6 --trees=k,k --target=14 --min=9
+07 --w=5 --h=6 --trees=k --walls=2 --target=15 --min=10
+08 --w=6 --h=6 --trees=k,k --target=18 --min=12
+09 --w=4 --h=5 --trees=kn --target=9 --min=6
+10 --w=5 --h=5 --trees=k,n --target=11 --min=7
+11 --w=5 --h=5 --trees=kn,k --target=12 --min=8
+12 --w=5 --h=6 --trees=k,n --target=14 --min=9
+13 --w=5 --h=6 --trees=kn,n --target=15 --min=10
+14 --w=6 --h=6 --trees=k,n,kn --target=17 --min=11
+15 --w=6 --h=6 --trees=kn,k,n --walls=1 --target=18 --min=12
+16 --w=6 --h=7 --trees=k,n,kn --target=20 --min=13
+17 --w=5 --h=5 --trees=k,n --fixed=2 --target=12 --min=7
+18 --w=5 --h=6 --trees=kn --fixed=2 --target=14 --min=9
+19 --w=5 --h=6 --trees=k,n --fixed=3 --target=15 --min=10
+20 --w=6 --h=6 --trees=k,kn --fixed=3 --target=17 --min=11
+21 --w=6 --h=6 --trees=k,n,kn --fixed=3 --target=18 --min=12
+22 --w=6 --h=7 --trees=kn,n --fixed=3 --target=20 --min=13
+23 --w=6 --h=7 --trees=k,n --fixed=4 --target=21 --min=14
+24 --w=6 --h=8 --trees=k,n,kn --fixed=4 --target=23 --min=15
+25 --w=5 --h=5 --trees=k,n --cross --empty=3 --target=11 --min=6
+26 --w=5 --h=5 --trees=k,n --cross --empty=3 --target=12 --min=7
+27 --w=5 --h=6 --trees=k,n --cross --empty=3 --target=14 --min=9
+28 --w=5 --h=6 --trees=kn,k --cross --fixed=1 --empty=3 --target=15 --min=10
+29 --w=6 --h=6 --trees=k,n --cross --empty=3 --target=17 --min=11
+30 --w=6 --h=6 --trees=k,n,kn --cross --fixed=2 --empty=3 --target=18 --min=12
+31 --w=6 --h=7 --trees=k,n --cross --fixed=2 --empty=3 --target=20 --min=13
+32 --w=6 --h=7 --trees=k,n,kn --cross --fixed=2 --empty=3 --target=22 --min=14
+33 --w=5 --h=5 --trees=s,k --target=12 --min=7
+34 --w=5 --h=6 --trees=ks,n --target=14 --min=9
+35 --w=5 --h=6 --trees=ns,k --fixed=2 --target=15 --min=10
+36 --w=6 --h=6 --trees=kns,k --target=17 --min=11
+37 --w=6 --h=6 --trees=k,n,s --cross --empty=3 --target=18 --min=12
+38 --w=6 --h=7 --trees=kn,s,ks --fixed=2 --target=20 --min=13
+39 --w=6 --h=7 --trees=kns,k --cross --fixed=2 --empty=3 --target=22 --min=14
+40 --w=6 --h=8 --trees=k,n,s,kns --cross --fixed=3 --empty=3 --target=24 --min=15
