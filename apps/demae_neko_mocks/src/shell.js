@@ -13,20 +13,24 @@
   function buildMenu() {
     const list = $('#cards');
     list.innerHTML = '';
+    let fresh = 0;
     GAMES.forEach((g, i) => {
       const done = cleared(g.id).length;
+      const label = g.kept ? '残した案' : `新案${++fresh}`;
+      const chips = g.gimmicks.map(([name, on]) => `<li class="${on ? 'on' : ''}">${name}</li>`).join('');
       const card = document.createElement('button');
       card.className = 'card';
       card.id = 'card-' + g.id;
       card.innerHTML = `
         <canvas class="thumb" width="1" height="1" aria-hidden="true"></canvas>
         <span class="card-text">
-          <span class="card-no">案${i + 1}</span>
+          <span class="card-no ${g.kept ? 'kept' : ''}">${label}</span>
           <span class="card-title">${g.title}</span>
           <span class="card-en">${g.en}</span>
           <span class="card-pitch">${g.pitch}</span>
           <span class="card-progress">${LEVELS[g.id].map((_, k) => `<i class="${cleared(g.id).includes(k) ? 'on' : ''}"></i>`).join('')}<b>${done}/${LEVELS[g.id].length}</b></span>
-        </span>`;
+        </span>
+        <ul class="chips" aria-label="しかけ">${chips}</ul>`;
       card.addEventListener('click', () => open(i, firstOpen(g.id)));
       list.appendChild(card);
       drawThumb(card.querySelector('canvas'), g);
@@ -71,6 +75,9 @@
     game = new meta.cls(lv, { won });
     $('#receipt').hidden = true;
     $('#g-level').textContent = `${levelIndex + 1} / ${LEVELS[meta.id].length}`;
+    const note = meta.notes[levelIndex];
+    $('#g-note').textContent = note || '';
+    $('#g-note').hidden = !note;
     $('#dots').innerHTML = LEVELS[meta.id].map((_, k) => `<button class="dot ${k === levelIndex ? 'cur' : ''} ${cleared(meta.id).includes(k) ? 'on' : ''}" data-k="${k}" aria-label="${k + 1}問目">${k + 1}</button>`).join('');
     $('#dots').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { levelIndex = +b.dataset.k; start(); }));
     resize();
@@ -106,9 +113,9 @@
     const c = cleared(meta.id);
     if (!c.includes(levelIndex)) store.set('cleared:' + meta.id, [...c, levelIndex]);
     const stars = st.label ? 3 : st.moves <= st.par ? 3 : st.moves <= st.par * 1.5 ? 2 : 1;
-    $('#r-body').textContent = meta.id === 'deduce'
-      ? `${st.moves}回目で全員に届けました`
-      : meta.id === 'stroke' || meta.id === 'pack' ? 'ぴったり届けました' : `${st.moves}手で配達（目標 ${st.par}手）`;
+    $('#r-body').textContent = meta.id === 'pack' ? 'ぴったり詰めました'
+      : meta.id === 'dashi' ? `${st.moves}回まわして、だしが届きました`
+        : `${st.moves}手で配達（目標 ${st.par}手）`;
     $('#r-stars').innerHTML = [0, 1, 2].map((k) => `<i class="${k < stars ? 'on' : ''}">済</i>`).join('');
     const last = levelIndex >= LEVELS[meta.id].length - 1;
     $('#r-next').textContent = last ? 'ほかの案へ' : '次の出前へ';

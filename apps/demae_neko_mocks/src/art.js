@@ -410,12 +410,54 @@ const Art = {
         E(x + r * 0.5, y + r * 0.3, r * 0.3, r * 0.2, '#7FB069', lw * 0.6);
         break;
       }
+      // oden
+      case 'daikon': {
+        E(x, y + r * 0.25, r * 0.8, r * 0.35, '#F3E7C4');
+        ctx.beginPath();
+        ctx.rect(x - r * 0.8, y - r * 0.3, r * 1.6, r * 0.55);
+        ctx.fillStyle = '#F3E7C4'; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x - r * 0.8, y - r * 0.3); ctx.lineTo(x - r * 0.8, y + r * 0.25); ctx.moveTo(x + r * 0.8, y - r * 0.3); ctx.lineTo(x + r * 0.8, y + r * 0.25);
+        ctx.lineWidth = lw; ctx.strokeStyle = C.ink; ctx.stroke();
+        E(x, y - r * 0.3, r * 0.8, r * 0.35, '#E6CFA0');
+        break;
+      }
+      case 'egg': {
+        E(x, y, r * 0.62, r * 0.82, '#C98A45');
+        E(x - r * 0.15, y - r * 0.25, r * 0.15, r * 0.22, 'rgba(255,255,255,.4)', 0);
+        break;
+      }
+      case 'chikuwa': {
+        ctx.save(); ctx.translate(x, y); ctx.rotate(-0.4);
+        Art.rr(ctx, -r, -r * 0.34, r * 2, r * 0.68, r * 0.34);
+        Art.inked(ctx, '#E9D2A0', lw);
+        ctx.fillStyle = '#B86F35';
+        ctx.fillRect(-r * 0.7, -r * 0.34, r * 1.4, r * 0.3);
+        E(r * 0.95, 0, r * 0.14, r * 0.3, '#7A4A2A', lw * 0.6);
+        ctx.restore();
+        break;
+      }
+      case 'konnyaku': {
+        ctx.beginPath(); ctx.moveTo(x, y - r * 0.8); ctx.lineTo(x + r * 0.85, y + r * 0.6); ctx.lineTo(x - r * 0.85, y + r * 0.6); ctx.closePath();
+        Art.inked(ctx, '#8C8A86', lw);
+        ctx.fillStyle = '#5E5C58';
+        for (const [dx, dy] of [[-0.2, 0.2], [0.2, 0.3], [0, -0.1], [-0.35, 0.45], [0.4, 0.45]]) ctx.fillRect(x + dx * r, y + dy * r, r * 0.07, r * 0.07);
+        break;
+      }
+      case 'ganmo': {
+        E(x, y, r * 0.85, r * 0.7, '#C9803F');
+        ctx.fillStyle = '#6E9C58';
+        ctx.fillRect(x - r * 0.3, y - r * 0.1, r * 0.12, r * 0.12);
+        ctx.fillStyle = '#D8433A';
+        ctx.fillRect(x + r * 0.2, y + r * 0.1, r * 0.12, r * 0.12);
+        break;
+      }
       default: E(x, y, r * 0.7, r * 0.7, '#ddd');
     }
   },
 };
 
 const FOOD_NAME = {
+  daikon: '大根', egg: '卵', chikuwa: 'ちくわ', konnyaku: 'こんにゃく', ganmo: 'がんも',
   ramen: 'ラーメン', soba: 'ざるそば', sushi: 'お寿司', tamago: '卵焼き', onigiri: 'おにぎり', gyoza: '餃子',
   miso: 'みそ汁', tempura: '天ぷら', purin: 'プリン', salad: 'サラダ', dango: 'だんご', bento: 'お弁当',
 };

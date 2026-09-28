@@ -59,6 +59,14 @@
   .card-progress i.on { background: var(--shu); border-color: var(--shu); }
   .card-progress b { font-size: 11px; color: var(--ink-soft); font-weight: 500; margin-left: 4px; font-variant-numeric: tabular-nums; }
 
+  .card { grid-template-areas: "thumb text" "chips chips"; }
+  .card .thumb { grid-area: thumb; }
+  .card .card-text { grid-area: text; }
+  .chips { grid-area: chips; display: flex; flex-wrap: wrap; gap: 5px; margin: 2px 0 0; padding: 0; list-style: none; }
+  .chips li, .chip { font-size: 11.5px; line-height: 1.3; padding: 3px 8px; border-radius: 999px; border: 1.5px dashed var(--ink-soft); color: var(--ink-soft); background: transparent; }
+  .chips li.on, .chip.on { border-style: solid; border-color: var(--shu); color: var(--shu); background: #FFF4EC; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 2px 14px; }
+  .card-no.kept { color: var(--noren); }
   .note { margin-top: 22px; padding: 12px 14px; background: rgba(255,251,242,.7); border: 1.5px dashed var(--ink-soft); border-radius: 6px; font-size: 13px; color: var(--ink-soft); }
 
   /* play screen */
@@ -74,7 +82,9 @@
   .chalk b { display: block; font: 400 18px/1.1 var(--display); font-variant-numeric: tabular-nums; }
   .chalk span { font-size: 10.5px; opacity: .8; }
   .rule { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 6px; }
-  .rule p { margin: 0; font-size: 13px; line-height: 1.6; background: var(--card); border: 1.5px solid var(--ink); border-radius: 6px; padding: 6px 10px; flex: 1; }
+  .rule-text { flex: 1; display: grid; gap: 6px; min-width: 0; }
+  .rule p { margin: 0; font-size: 13px; line-height: 1.6; background: var(--card); border: 1.5px solid var(--ink); border-radius: 6px; padding: 6px 10px; }
+  .rule .gnote { background: #FFF1D6; border-color: var(--shu); color: var(--ink); font-weight: 700; }
   .rule button { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink); background: var(--card); font: 400 16px/1 var(--display); }
   #stage { display: flex; justify-content: center; padding-block: 6px; }
   #board { touch-action: none; display: block; max-width: 100%; }
@@ -109,7 +119,8 @@
         <p>つみあげ出前のねこが主人公の、次のゲーム案</p>
       </div>
     </header>
-    <p class="lead">ルールの違う<b>5つの案</b>を、それぞれ4問ずつ遊べるモックにしました。全問、解けること（案2・3・5は答えが1通りなこと）を確かめてあります。気に入った順番を教えてください。</p>
+    <p class="lead">前回の案から<b>おかもち詰め</b>を残し、<b>しかけを足していける</b>ことを軸に新しい4案を作りました。どの案も4問で、2問目からしかけが1つずつ増えます。全問、解けることと、目標手数が最短であることを確かめてあります。</p>
+    <p class="legend"><span class="chip on">モックで遊べるしかけ</span><span class="chip">これから足せるしかけ</span></p>
     <div id="cards"></div>
     <p class="note">進み具合はこの端末のブラウザにだけ保存されます。絵と遊び心地の確認用なので、音はありません。</p>
   </section>
@@ -123,7 +134,7 @@
         <div class="chalk"><b id="g-moves">0手</b><span id="g-par"></span></div>
       </div>
     </header>
-    <div class="rule"><p id="g-rule"></p><button id="rule-toggle" aria-label="ルールの表示を切り替える">?</button></div>
+    <div class="rule"><div class="rule-text"><p id="g-rule"></p><p id="g-note" class="gnote" hidden></p></div><button id="rule-toggle" aria-label="ルールの表示を切り替える">?</button></div>
     <div id="stage"><canvas id="board" width="1" height="1"></canvas></div>
     <div class="tools">
       <div class="left">

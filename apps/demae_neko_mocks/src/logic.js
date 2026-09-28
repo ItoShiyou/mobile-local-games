@@ -31,53 +31,7 @@
     return null;
   }
 
-  // ---------------------------------------------------------------- 1. slide
-  // After the rain the street is slick: the cart slides until something
-  // stops it. Sliding into a guest hands over their order. Straw mats stop
-  // the cart on them.
-  const Slide = {
-    parse(map) {
-      const h = map.length, w = map[0].length;
-      const guests = [];
-      let start = null;
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        const c = map[y][x];
-        if (c === 'P') start = { x, y };
-        if (c === 'G') guests.push({ x, y });
-      }
-      return { w, h, map, guests, start };
-    },
-    cell(b, x, y) { return x < 0 || y < 0 || x >= b.w || y >= b.h ? '#' : b.map[y][x]; },
-    guestAt(b, x, y) { return b.guests.findIndex((g) => g.x === x && g.y === y); },
-    init(b) { return { x: b.start.x, y: b.start.y, served: 0 }; },
-    // returns { state, path:[{x,y}], served:index|-1 } or null when nothing happens
-    move(b, s, dir) {
-      const [dx, dy] = DIRS[dir];
-      let x = s.x, y = s.y;
-      const path = [];
-      let hit = -1;
-      for (;;) {
-        const nx = x + dx, ny = y + dy;
-        const g = Slide.guestAt(b, nx, ny);
-        if (g >= 0) { hit = g; break; }
-        if (Slide.cell(b, nx, ny) === '#') break;
-        x = nx; y = ny;
-        path.push({ x, y });
-        if (Slide.cell(b, x, y) === 'o') break;
-      }
-      const newServe = hit >= 0 && !(s.served & (1 << hit));
-      if (!path.length && !newServe) return null;
-      return { state: { x, y, served: newServe ? s.served | (1 << hit) : s.served }, path, served: newServe ? hit : -1 };
-    },
-    won(b, s) { return s.served === (1 << b.guests.length) - 1; },
-    solve(b) {
-      return bfs(Slide.init(b), (s) => `${s.x},${s.y},${s.served}`,
-        (s) => DIR_LIST.map((d) => [d, Slide.move(b, s, d)]).filter(([, r]) => r).map(([d, r]) => [d, r.state]),
-        (s) => Slide.won(b, s));
-    },
-  };
-
-  // ---------------------------------------------------------------- 2. pack
+  // ------------------------------------------------------------------ 0. pack
   // Fill the okamochi (the delivery box) with every dish. Hot and cold
   // dishes may not touch; soups have to sit on the bottom shelf.
   function norm(cells) {
@@ -199,124 +153,261 @@
     },
   };
 
-  // --------------------------------------------------------------- 3. stroke
-  // One round of the neighbourhood: walk every lane exactly once, calling at
-  // the numbered houses in order.
-  const Stroke = {
-    parse(map) {
-      const h = map.length, w = map[0].length;
-      const nums = {};
-      let open = 0;
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        const c = map[y][x];
-        if (c !== '#') open++;
-        if (/[0-9a-z]/.test(c) && c !== '.') nums[`${x},${y}`] = parseInt(c, 36);
-      }
-      const last = Math.max(...Object.values(nums));
-      const start = Object.entries(nums).find(([, v]) => v === 1)[0].split(',').map(Number);
-      return { w, h, map, nums, last, open, start: { x: start[0], y: start[1] } };
+  const STEP = (x, y, dir) => [x + DIRS[dir][0], y + DIRS[dir][1]];
+  const isWall = (map, x, y) => y < 0 || x < 0 || y >= map.length || x >= map[0].length || map[y][x] === '#';
+
+  // ----------------------------------------------------------------- 1. oden
+  // Push the ingredients into the oden pots. Each pot takes them only in the
+  // order on its recipe card.
+  // Gimmicks: several pots, ice (a pushed ingredient keeps sliding),
+  // and more to come (see README).
+  const Oden = {
+    // level: { map: rows with '#' wall, '.' floor, '_' ice, 'P' cat,
+    //          lower-case ingredient, upper-case pot }, recipes: { A: 'dec' } }
+    parse(level) {
+      const items = [], pots = [];
+      let start = null;
+      level.map.forEach((row, y) => [...row].forEach((c, x) => {
+        if (c === 'P') start = { x, y };
+        else if (/[a-z]/.test(c)) items.push({ x, y, k: c });
+        else if (/[A-Z]/.test(c)) pots.push({ x, y, id: c, recipe: level.recipes[c] });
+      }));
+      return { map: level.map, items, pots, start };
     },
-    open(b, x, y) { return x >= 0 && y >= 0 && x < b.w && y < b.h && b.map[y][x] !== '#'; },
-    // can the path (list of {x,y}) be extended to (x,y)?
-    canStep(b, path, x, y) {
-      const t = path[path.length - 1];
-      if (Math.abs(t.x - x) + Math.abs(t.y - y) !== 1 || !Stroke.open(b, x, y)) return false;
-      if (path.some((p) => p.x === x && p.y === y)) return false;
-      const n = b.nums[`${x},${y}`];
-      if (n === undefined) return true;
-      return n === Stroke.nextNumber(b, path);
-    },
-    nextNumber(b, path) {
-      let k = 1;
-      for (const p of path) { const n = b.nums[`${p.x},${p.y}`]; if (n !== undefined) k = n + 1; }
-      return k;
-    },
-    won(b, path) {
-      const t = path[path.length - 1];
-      return path.length === b.open && b.nums[`${t.x},${t.y}`] === b.last;
-    },
-    count(b, cap = 2) {
-      let n = 0;
-      const path = [b.start];
-      const seen = new Set([`${b.start.x},${b.start.y}`]);
-      const rec = () => {
-        if (n >= cap) return;
-        if (Stroke.won(b, path)) { n++; return; }
-        const t = path[path.length - 1];
-        for (const [dx, dy] of Object.values(DIRS)) {
-          const x = t.x + dx, y = t.y + dy, k = `${x},${y}`;
-          if (seen.has(k) || !Stroke.canStep(b, path, x, y)) continue;
-          seen.add(k); path.push({ x, y });
-          rec();
-          path.pop(); seen.delete(k);
-        }
+    ice(b, x, y) { return !isWall(b.map, x, y) && b.map[y][x] === '_'; },
+    init(b) { return { x: b.start.x, y: b.start.y, items: b.items.map((i) => ({ ...i })), prog: b.pots.map(() => 0) }; },
+    potAt(b, x, y) { return b.pots.findIndex((p) => p.x === x && p.y === y); },
+    itemAt(s, x, y) { return s.items.findIndex((i) => i.x === x && i.y === y); },
+    // opts.anyOrder: recipes accept their ingredients in any order (used to
+    // check that the order matters when generating levels)
+    move(b, s, dir, opts = {}) {
+      const [nx, ny] = STEP(s.x, s.y, dir);
+      if (isWall(b.map, nx, ny) || Oden.potAt(b, nx, ny) >= 0) return null;
+      const ii = Oden.itemAt(s, nx, ny);
+      if (ii < 0) return { state: { ...s, x: nx, y: ny }, push: null };
+      const item = s.items[ii];
+      const accepts = (pi) => {
+        const p = b.pots[pi], k = s.prog[pi];
+        if (k >= p.recipe.length) return false;
+        return opts.anyOrder ? p.recipe.includes(item.k) : p.recipe[k] === item.k;
       };
-      rec();
-      return n;
-    },
-  };
-
-  // ----------------------------------------------------------------- 4. sort
-  // Stall counters with mixed plates. Carry the top plate to another
-  // counter (empty, or with the same dish on top) until every counter holds
-  // one dish only.
-  const Sort = {
-    init(level) { return level.stacks.map((s) => [...s]); },
-    canMove(level, st, i, j) {
-      if (i === j || !st[i].length || st[j].length >= level.cap) return false;
-      return !st[j].length || st[j][st[j].length - 1] === st[i][st[i].length - 1];
-    },
-    move(level, st, i, j) {
-      if (!Sort.canMove(level, st, i, j)) return null;
-      const n = st.map((s) => [...s]);
-      n[j].push(n[i].pop());
-      return n;
-    },
-    won(level, st) {
-      return st.every((s) => !s.length || (s.length === level.cap && s.every((d) => d === s[0])));
-    },
-    solve(level) {
-      return bfs(Sort.init(level), (st) => st.map((s) => s.join('')).sort().join('|'),
-        (st) => {
-          const out = [];
-          for (let i = 0; i < st.length; i++) for (let j = 0; j < st.length; j++) {
-            const n = Sort.move(level, st, i, j);
-            if (n) out.push([[i, j], n]);
-          }
-          return out;
-        },
-        (st) => Sort.won(level, st));
-    },
-  };
-
-  // --------------------------------------------------------------- 5. deduce
-  // Overheard at the counter: work out who ordered what from what the
-  // regulars say, then serve everyone at once.
-  function permutations(a) {
-    if (a.length <= 1) return [a];
-    return a.flatMap((x, i) => permutations([...a.slice(0, i), ...a.slice(i + 1)]).map((p) => [x, ...p]));
-  }
-  const Deduce = {
-    permutations,
-    // clue: {t:'is'|'not'|'adj'|'left'|'end'|'mid', seat?, a?, b?}
-    holds(c, asg) {
-      const pos = (d) => asg.indexOf(d);
-      const n = asg.length;
-      switch (c.t) {
-        case 'is': return asg[c.seat] === c.a;
-        case 'not': return asg[c.seat] !== c.a;
-        case 'adj': return Math.abs(pos(c.a) - pos(c.b)) === 1;
-        case 'left': return pos(c.a) < pos(c.b);
-        case 'end': return pos(c.a) === 0 || pos(c.a) === n - 1;
-        case 'mid': return pos(c.a) !== 0 && pos(c.a) !== n - 1;
-        default: return false;
+      let [tx, ty] = STEP(nx, ny, dir);
+      const path = [];
+      let into = -1;
+      for (;;) {
+        const pi = Oden.potAt(b, tx, ty);
+        if (pi >= 0) { if (accepts(pi)) into = pi; break; }
+        if (isWall(b.map, tx, ty) || Oden.itemAt(s, tx, ty) >= 0) break;
+        path.push({ x: tx, y: ty });
+        if (!Oden.ice(b, tx, ty)) break;
+        [tx, ty] = STEP(tx, ty, dir);
       }
+      if (!path.length && into < 0) return null;
+      const items = s.items.filter((_, i) => i !== ii);
+      const prog = [...s.prog];
+      if (into >= 0) {
+        prog[into]++;
+      } else {
+        const end = path[path.length - 1];
+        items.push({ x: end.x, y: end.y, k: item.k });
+      }
+      return { state: { x: nx, y: ny, items, prog }, push: { from: { x: nx, y: ny }, path, into, k: item.k } };
     },
-    solutions(level) {
-      return permutations(level.dishes).filter((p) => level.clues.every((c) => Deduce.holds(c, p)));
+    key(s) { return `${s.x},${s.y}|${s.items.map((i) => `${i.k}${i.x},${i.y}`).sort().join(';')}|${s.prog.join(',')}`; },
+    won(b, s) { return b.pots.every((p, i) => s.prog[i] >= p.recipe.length); },
+    solve(b, opts = {}) {
+      return bfs(Oden.init(b), Oden.key,
+        (s) => DIR_LIST.map((d) => [d, Oden.move(b, s, d, opts)]).filter(([, r]) => r).map(([d, r]) => [d, r.state]),
+        (s) => Oden.won(b, s), 400000);
     },
   };
 
-  root.Logic = { DIRS, DIR_LIST, bfs, Slide, Pack, Stroke, Sort, Deduce };
+  // ---------------------------------------------------------------- 2. light
+  // Guide the lamp's light to the paper lanterns by pushing the folding
+  // mirror screens. Gimmicks: red paper (turns the light red for red
+  // lanterns), a bamboo blind (lets half the light through, reflects half).
+  const REFLECT = {
+    '/': { right: 'up', up: 'right', left: 'down', down: 'left' },
+    '\\': { right: 'down', down: 'right', left: 'up', up: 'left' },
+  };
+  const Light = {
+    // level: { map, src:{x,y,dir}, mirrors:[{x,y,o}], targets:[{x,y,red}], filters:[{x,y}], blinds:[{x,y,o}] }
+    parse(level) {
+      let start = null;
+      level.map.forEach((row, y) => [...row].forEach((c, x) => { if (c === 'P') start = { x, y }; }));
+      return { ...level, filters: level.filters || [], blinds: level.blinds || [], start };
+    },
+    init(b) { return { x: b.start.x, y: b.start.y, mirrors: b.mirrors.map((m) => ({ ...m })) }; },
+    solid(b, s, x, y) {
+      // things that stop the cat and the screens
+      if (isWall(b.map, x, y)) return 'wall';
+      if (b.src.x === x && b.src.y === y) return 'src';
+      if (b.targets.some((t) => t.x === x && t.y === y)) return 'target';
+      if (b.blinds.some((t) => t.x === x && t.y === y)) return 'blind';
+      if (s.mirrors.some((m) => m.x === x && m.y === y)) return 'mirror';
+      return null;
+    },
+    move(b, s, dir) {
+      const [nx, ny] = STEP(s.x, s.y, dir);
+      const what = Light.solid(b, s, nx, ny);
+      if (!what) return { state: { ...s, x: nx, y: ny }, push: null };
+      if (what !== 'mirror') return null;
+      const [tx, ty] = STEP(nx, ny, dir);
+      if (Light.solid(b, s, tx, ty) || b.filters.some((f) => f.x === tx && f.y === ty)) return null;
+      const mirrors = s.mirrors.map((m) => (m.x === nx && m.y === ny ? { ...m, x: tx, y: ty } : m));
+      return { state: { x: nx, y: ny, mirrors }, push: { from: { x: nx, y: ny }, to: { x: tx, y: ty } } };
+    },
+    // follow the light: segments for drawing and which lanterns are lit
+    trace(b, s) {
+      const segs = [];
+      const lit = b.targets.map(() => ({ any: false, red: false }));
+      const seen = new Set();
+      const queue = [{ x: b.src.x, y: b.src.y, dir: b.src.dir, red: false }];
+      while (queue.length) {
+        let { x, y, dir, red } = queue.shift();
+        for (let guard = 0; guard < 200; guard++) {
+          const [nx, ny] = STEP(x, y, dir);
+          const k = `${nx},${ny},${dir},${red}`;
+          if (seen.has(k)) break;
+          seen.add(k);
+          if (isWall(b.map, nx, ny) || (b.src.x === nx && b.src.y === ny)) { segs.push({ x, y, nx, ny, red, stop: true }); break; }
+          segs.push({ x, y, nx, ny, red });
+          x = nx; y = ny;
+          if (b.filters.some((f) => f.x === x && f.y === y)) red = true;
+          const ti = b.targets.findIndex((t) => t.x === x && t.y === y);
+          if (ti >= 0) { lit[ti].any = true; if (red) lit[ti].red = true; }
+          const m = s.mirrors.find((mm) => mm.x === x && mm.y === y);
+          if (m) { dir = REFLECT[m.o][dir]; continue; }
+          const bl = b.blinds.find((mm) => mm.x === x && mm.y === y);
+          if (bl) queue.push({ x, y, dir: REFLECT[bl.o][dir], red });
+        }
+      }
+      return { segs, lit };
+    },
+    litOk(b, lit, i) { return b.targets[i].red ? lit[i].red : lit[i].any; },
+    won(b, s) { const { lit } = Light.trace(b, s); return b.targets.every((_, i) => Light.litOk(b, lit, i)); },
+    key(s) { return `${s.x},${s.y}|${s.mirrors.map((m) => `${m.o}${m.x},${m.y}`).sort().join(';')}`; },
+    solve(b) {
+      return bfs(Light.init(b), Light.key,
+        (s) => DIR_LIST.map((d) => [d, Light.move(b, s, d)]).filter(([, r]) => r).map(([d, r]) => [d, r.state]),
+        (s) => Light.won(b, s), 300000);
+    },
+  };
+
+  // --------------------------------------------------------------- 3. fusuma
+  // An old inn with sliding doors. Push the fusuma along their tracks to
+  // reach the guest room. Gimmicks: paired doors (move together), a locked
+  // door (find the landlady's key first).
+  const Fusuma = {
+    // level: { map ('#' wall, '.' floor, 'P' cat, 'G' guest room, 'k' key), panels:[{x,y,len,axis:'h'|'v',lock?,link?}] }
+    parse(level) {
+      let start = null, goal = null, key = null;
+      level.map.forEach((row, y) => [...row].forEach((c, x) => {
+        if (c === 'P') start = { x, y };
+        if (c === 'G') goal = { x, y };
+        if (c === 'k') key = { x, y };
+      }));
+      return { map: level.map, panels: level.panels, start, goal, key };
+    },
+    cells(p, pos) { return Array.from({ length: p.len }, (_, i) => (p.axis === 'h' ? { x: pos.x + i, y: pos.y } : { x: pos.x, y: pos.y + i })); },
+    init(b) { return { x: b.start.x, y: b.start.y, pos: b.panels.map((p) => ({ x: p.x, y: p.y })), key: !b.key }; },
+    panelAt(b, s, x, y, skip = []) {
+      return b.panels.findIndex((p, i) => !skip.includes(i) && Fusuma.cells(p, s.pos[i]).some((c) => c.x === x && c.y === y));
+    },
+    move(b, s, dir) {
+      const [nx, ny] = STEP(s.x, s.y, dir);
+      if (isWall(b.map, nx, ny)) return null;
+      const pi = Fusuma.panelAt(b, s, nx, ny);
+      if (pi < 0) {
+        const key = s.key || (b.key && b.key.x === nx && b.key.y === ny);
+        return { state: { ...s, x: nx, y: ny, key }, push: null };
+      }
+      const p = b.panels[pi];
+      const along = p.axis === 'h' ? dir === 'left' || dir === 'right' : dir === 'up' || dir === 'down';
+      if (!along) return { blocked: 'across', panel: pi };
+      if (p.lock && !s.key) return { blocked: 'locked', panel: pi };
+      const moving = b.panels.map((q, i) => i).filter((i) => i === pi || (p.link && b.panels[i].link === p.link));
+      const [dx, dy] = DIRS[dir];
+      for (const i of moving) {
+        const q = b.panels[i];
+        if (i !== pi && q.axis !== p.axis) return { blocked: 'link', panel: pi };
+        for (const c of Fusuma.cells(q, { x: s.pos[i].x + dx, y: s.pos[i].y + dy })) {
+          if (isWall(b.map, c.x, c.y) || '.P'.indexOf(b.map[c.y][c.x]) < 0) return { blocked: 'jam', panel: pi };
+          if (Fusuma.panelAt(b, s, c.x, c.y, moving) >= 0) return { blocked: 'jam', panel: pi };
+          if (c.x === s.x && c.y === s.y) return { blocked: 'jam', panel: pi };
+        }
+      }
+      const pos = s.pos.map((q, i) => (moving.includes(i) ? { x: q.x + dx, y: q.y + dy } : q));
+      return { state: { ...s, x: nx, y: ny, pos }, push: { moving } };
+    },
+    won(b, s) { return s.x === b.goal.x && s.y === b.goal.y; },
+    key(s) { return `${s.x},${s.y},${s.key ? 1 : 0}|${s.pos.map((p) => `${p.x},${p.y}`).join(';')}`; },
+    solve(b) {
+      return bfs(Fusuma.init(b), Fusuma.key,
+        (s) => DIR_LIST.map((d) => [d, Fusuma.move(b, s, d)]).filter(([, r]) => r && r.state).map(([d, r]) => [d, r.state]),
+        (s) => Fusuma.won(b, s), 400000);
+    },
+  };
+
+  // ---------------------------------------------------------------- 4. dashi
+  // Turn the bamboo pipes so the stock reaches every bowl. Stocks that meet
+  // mix: katsuo + kombu = awase. Gimmicks: mixing, fixed iron pipes, a
+  // crossing that keeps two stocks apart, and spills (an open pipe end
+  // loses the stock).
+  // Openings: N=1 E=2 S=4 W=8
+  const OPEN = { N: 1, E: 2, S: 4, W: 8 };
+  const DIR_BIT = { up: 1, right: 2, down: 4, left: 8 };
+  const OPP = { 1: 4, 2: 8, 4: 1, 8: 2 };
+  const BIT_STEP = { 1: [0, -1], 2: [1, 0], 4: [0, 1], 8: [-1, 0] };
+  const BASE = { I: 5, L: 3, T: 14, X: 15, '.': 0 };
+  const rot = (m, r) => { for (let i = 0; i < r; i++) m = ((m << 1) | (m >> 3)) & 15; return m; };
+  const Dashi = {
+    // level: { tiles: rows of I/L/T/X/. and S (source) / B (bowl),
+    //          rot: rows of 0-3, fixed: ['x,y'], sources:[{x,y,f:'k'|'n',dir}], bowls:[{x,y,want,dir}], answer: rows of 0-3 }
+    OPEN, BASE, rot,
+    mask(level, r, x, y) {
+      const t = level.tiles[y][x];
+      if (t === 'S') return DIR_BIT[level.sources.find((s) => s.x === x && s.y === y).dir];
+      if (t === 'B') return DIR_BIT[level.bowls.find((s) => s.x === x && s.y === y).dir];
+      return rot(BASE[t] || 0, r[y][x]);
+    },
+    // channel of an opening: a crossing keeps N-S and E-W apart
+    chan(level, x, y, bit) { return level.tiles[y][x] === 'X' && (bit === 2 || bit === 8) ? 1 : 0; },
+    flow(level, r) {
+      const h = level.tiles.length, w = level.tiles[0].length;
+      const parent = {};
+      const find = (a) => { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; };
+      const node = (x, y, c) => { const k = `${x},${y},${c}`; if (!(k in parent)) parent[k] = k; return k; };
+      const union = (a, b) => { parent[find(a)] = find(b); };
+      const open = [];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const m = Dashi.mask(level, r, x, y);
+        for (const bit of [1, 2, 4, 8]) {
+          if (!(m & bit)) continue;
+          const a = node(x, y, Dashi.chan(level, x, y, bit));
+          const [dx, dy] = BIT_STEP[bit];
+          const nx = x + dx, ny = y + dy;
+          const nm = nx >= 0 && ny >= 0 && nx < w && ny < h ? Dashi.mask(level, r, nx, ny) : 0;
+          if (nm & OPP[bit]) union(a, node(nx, ny, Dashi.chan(level, nx, ny, OPP[bit])));
+          else open.push(a);
+        }
+      }
+      const flavours = {};
+      for (const s of level.sources) {
+        const c = find(node(s.x, s.y, 0));
+        flavours[c] = (flavours[c] || '') + s.f;
+      }
+      const spill = new Set(open.map(find));
+      // what each node carries, for drawing
+      const carry = (x, y, c) => { const k = `${x},${y},${c}`; return k in parent ? [...new Set(flavours[find(k)] || '')].sort().join('') : ''; };
+      const spilling = (x, y, c) => { const k = `${x},${y},${c}`; return k in parent && spill.has(find(k)) && !!flavours[find(k)]; };
+      const bowls = level.bowls.map((bw) => carry(bw.x, bw.y, 0));
+      const ok = level.bowls.every((bw, i) => bowls[i] === [...bw.want].sort().join(''))
+        && level.sources.every((s) => !spill.has(find(node(s.x, s.y, 0))));
+      return { carry, spilling, bowls, ok };
+    },
+    won(level, r) { return Dashi.flow(level, r).ok; },
+  };
+  root.Logic = { DIRS, DIR_LIST, bfs, Pack, Oden, Light, Fusuma, Dashi };
   if (typeof module !== 'undefined') module.exports = root.Logic;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

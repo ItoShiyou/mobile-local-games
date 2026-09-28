@@ -59,6 +59,14 @@
   .card-progress i.on { background: var(--shu); border-color: var(--shu); }
   .card-progress b { font-size: 11px; color: var(--ink-soft); font-weight: 500; margin-left: 4px; font-variant-numeric: tabular-nums; }
 
+  .card { grid-template-areas: "thumb text" "chips chips"; }
+  .card .thumb { grid-area: thumb; }
+  .card .card-text { grid-area: text; }
+  .chips { grid-area: chips; display: flex; flex-wrap: wrap; gap: 5px; margin: 2px 0 0; padding: 0; list-style: none; }
+  .chips li, .chip { font-size: 11.5px; line-height: 1.3; padding: 3px 8px; border-radius: 999px; border: 1.5px dashed var(--ink-soft); color: var(--ink-soft); background: transparent; }
+  .chips li.on, .chip.on { border-style: solid; border-color: var(--shu); color: var(--shu); background: #FFF4EC; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 2px 14px; }
+  .card-no.kept { color: var(--noren); }
   .note { margin-top: 22px; padding: 12px 14px; background: rgba(255,251,242,.7); border: 1.5px dashed var(--ink-soft); border-radius: 6px; font-size: 13px; color: var(--ink-soft); }
 
   /* play screen */
@@ -74,7 +82,9 @@
   .chalk b { display: block; font: 400 18px/1.1 var(--display); font-variant-numeric: tabular-nums; }
   .chalk span { font-size: 10.5px; opacity: .8; }
   .rule { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 6px; }
-  .rule p { margin: 0; font-size: 13px; line-height: 1.6; background: var(--card); border: 1.5px solid var(--ink); border-radius: 6px; padding: 6px 10px; flex: 1; }
+  .rule-text { flex: 1; display: grid; gap: 6px; min-width: 0; }
+  .rule p { margin: 0; font-size: 13px; line-height: 1.6; background: var(--card); border: 1.5px solid var(--ink); border-radius: 6px; padding: 6px 10px; }
+  .rule .gnote { background: #FFF1D6; border-color: var(--shu); color: var(--ink); font-weight: 700; }
   .rule button { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink); background: var(--card); font: 400 16px/1 var(--display); }
   #stage { display: flex; justify-content: center; padding-block: 6px; }
   #board { touch-action: none; display: block; max-width: 100%; }
@@ -109,7 +119,8 @@
         <p>つみあげ出前のねこが主人公の、次のゲーム案</p>
       </div>
     </header>
-    <p class="lead">ルールの違う<b>5つの案</b>を、それぞれ4問ずつ遊べるモックにしました。全問、解けること（案2・3・5は答えが1通りなこと）を確かめてあります。気に入った順番を教えてください。</p>
+    <p class="lead">前回の案から<b>おかもち詰め</b>を残し、<b>しかけを足していける</b>ことを軸に新しい4案を作りました。どの案も4問で、2問目からしかけが1つずつ増えます。全問、解けることと、目標手数が最短であることを確かめてあります。</p>
+    <p class="legend"><span class="chip on">モックで遊べるしかけ</span><span class="chip">これから足せるしかけ</span></p>
     <div id="cards"></div>
     <p class="note">進み具合はこの端末のブラウザにだけ保存されます。絵と遊び心地の確認用なので、音はありません。</p>
   </section>
@@ -123,7 +134,7 @@
         <div class="chalk"><b id="g-moves">0手</b><span id="g-par"></span></div>
       </div>
     </header>
-    <div class="rule"><p id="g-rule"></p><button id="rule-toggle" aria-label="ルールの表示を切り替える">?</button></div>
+    <div class="rule"><div class="rule-text"><p id="g-rule"></p><p id="g-note" class="gnote" hidden></p></div><button id="rule-toggle" aria-label="ルールの表示を切り替える">?</button></div>
     <div id="stage"><canvas id="board" width="1" height="1"></canvas></div>
     <div class="tools">
       <div class="left">
@@ -181,53 +192,7 @@
     return null;
   }
 
-  // ---------------------------------------------------------------- 1. slide
-  // After the rain the street is slick: the cart slides until something
-  // stops it. Sliding into a guest hands over their order. Straw mats stop
-  // the cart on them.
-  const Slide = {
-    parse(map) {
-      const h = map.length, w = map[0].length;
-      const guests = [];
-      let start = null;
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        const c = map[y][x];
-        if (c === 'P') start = { x, y };
-        if (c === 'G') guests.push({ x, y });
-      }
-      return { w, h, map, guests, start };
-    },
-    cell(b, x, y) { return x < 0 || y < 0 || x >= b.w || y >= b.h ? '#' : b.map[y][x]; },
-    guestAt(b, x, y) { return b.guests.findIndex((g) => g.x === x && g.y === y); },
-    init(b) { return { x: b.start.x, y: b.start.y, served: 0 }; },
-    // returns { state, path:[{x,y}], served:index|-1 } or null when nothing happens
-    move(b, s, dir) {
-      const [dx, dy] = DIRS[dir];
-      let x = s.x, y = s.y;
-      const path = [];
-      let hit = -1;
-      for (;;) {
-        const nx = x + dx, ny = y + dy;
-        const g = Slide.guestAt(b, nx, ny);
-        if (g >= 0) { hit = g; break; }
-        if (Slide.cell(b, nx, ny) === '#') break;
-        x = nx; y = ny;
-        path.push({ x, y });
-        if (Slide.cell(b, x, y) === 'o') break;
-      }
-      const newServe = hit >= 0 && !(s.served & (1 << hit));
-      if (!path.length && !newServe) return null;
-      return { state: { x, y, served: newServe ? s.served | (1 << hit) : s.served }, path, served: newServe ? hit : -1 };
-    },
-    won(b, s) { return s.served === (1 << b.guests.length) - 1; },
-    solve(b) {
-      return bfs(Slide.init(b), (s) => `${s.x},${s.y},${s.served}`,
-        (s) => DIR_LIST.map((d) => [d, Slide.move(b, s, d)]).filter(([, r]) => r).map(([d, r]) => [d, r.state]),
-        (s) => Slide.won(b, s));
-    },
-  };
-
-  // ---------------------------------------------------------------- 2. pack
+  // ------------------------------------------------------------------ 0. pack
   // Fill the okamochi (the delivery box) with every dish. Hot and cold
   // dishes may not touch; soups have to sit on the bottom shelf.
   function norm(cells) {
@@ -349,131 +314,268 @@
     },
   };
 
-  // --------------------------------------------------------------- 3. stroke
-  // One round of the neighbourhood: walk every lane exactly once, calling at
-  // the numbered houses in order.
-  const Stroke = {
-    parse(map) {
-      const h = map.length, w = map[0].length;
-      const nums = {};
-      let open = 0;
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        const c = map[y][x];
-        if (c !== '#') open++;
-        if (/[0-9a-z]/.test(c) && c !== '.') nums[`${x},${y}`] = parseInt(c, 36);
-      }
-      const last = Math.max(...Object.values(nums));
-      const start = Object.entries(nums).find(([, v]) => v === 1)[0].split(',').map(Number);
-      return { w, h, map, nums, last, open, start: { x: start[0], y: start[1] } };
+  const STEP = (x, y, dir) => [x + DIRS[dir][0], y + DIRS[dir][1]];
+  const isWall = (map, x, y) => y < 0 || x < 0 || y >= map.length || x >= map[0].length || map[y][x] === '#';
+
+  // ----------------------------------------------------------------- 1. oden
+  // Push the ingredients into the oden pots. Each pot takes them only in the
+  // order on its recipe card.
+  // Gimmicks: several pots, ice (a pushed ingredient keeps sliding),
+  // and more to come (see README).
+  const Oden = {
+    // level: { map: rows with '#' wall, '.' floor, '_' ice, 'P' cat,
+    //          lower-case ingredient, upper-case pot }, recipes: { A: 'dec' } }
+    parse(level) {
+      const items = [], pots = [];
+      let start = null;
+      level.map.forEach((row, y) => [...row].forEach((c, x) => {
+        if (c === 'P') start = { x, y };
+        else if (/[a-z]/.test(c)) items.push({ x, y, k: c });
+        else if (/[A-Z]/.test(c)) pots.push({ x, y, id: c, recipe: level.recipes[c] });
+      }));
+      return { map: level.map, items, pots, start };
     },
-    open(b, x, y) { return x >= 0 && y >= 0 && x < b.w && y < b.h && b.map[y][x] !== '#'; },
-    // can the path (list of {x,y}) be extended to (x,y)?
-    canStep(b, path, x, y) {
-      const t = path[path.length - 1];
-      if (Math.abs(t.x - x) + Math.abs(t.y - y) !== 1 || !Stroke.open(b, x, y)) return false;
-      if (path.some((p) => p.x === x && p.y === y)) return false;
-      const n = b.nums[`${x},${y}`];
-      if (n === undefined) return true;
-      return n === Stroke.nextNumber(b, path);
-    },
-    nextNumber(b, path) {
-      let k = 1;
-      for (const p of path) { const n = b.nums[`${p.x},${p.y}`]; if (n !== undefined) k = n + 1; }
-      return k;
-    },
-    won(b, path) {
-      const t = path[path.length - 1];
-      return path.length === b.open && b.nums[`${t.x},${t.y}`] === b.last;
-    },
-    count(b, cap = 2) {
-      let n = 0;
-      const path = [b.start];
-      const seen = new Set([`${b.start.x},${b.start.y}`]);
-      const rec = () => {
-        if (n >= cap) return;
-        if (Stroke.won(b, path)) { n++; return; }
-        const t = path[path.length - 1];
-        for (const [dx, dy] of Object.values(DIRS)) {
-          const x = t.x + dx, y = t.y + dy, k = `${x},${y}`;
-          if (seen.has(k) || !Stroke.canStep(b, path, x, y)) continue;
-          seen.add(k); path.push({ x, y });
-          rec();
-          path.pop(); seen.delete(k);
-        }
+    ice(b, x, y) { return !isWall(b.map, x, y) && b.map[y][x] === '_'; },
+    init(b) { return { x: b.start.x, y: b.start.y, items: b.items.map((i) => ({ ...i })), prog: b.pots.map(() => 0) }; },
+    potAt(b, x, y) { return b.pots.findIndex((p) => p.x === x && p.y === y); },
+    itemAt(s, x, y) { return s.items.findIndex((i) => i.x === x && i.y === y); },
+    // opts.anyOrder: recipes accept their ingredients in any order (used to
+    // check that the order matters when generating levels)
+    move(b, s, dir, opts = {}) {
+      const [nx, ny] = STEP(s.x, s.y, dir);
+      if (isWall(b.map, nx, ny) || Oden.potAt(b, nx, ny) >= 0) return null;
+      const ii = Oden.itemAt(s, nx, ny);
+      if (ii < 0) return { state: { ...s, x: nx, y: ny }, push: null };
+      const item = s.items[ii];
+      const accepts = (pi) => {
+        const p = b.pots[pi], k = s.prog[pi];
+        if (k >= p.recipe.length) return false;
+        return opts.anyOrder ? p.recipe.includes(item.k) : p.recipe[k] === item.k;
       };
-      rec();
-      return n;
-    },
-  };
-
-  // ----------------------------------------------------------------- 4. sort
-  // Stall counters with mixed plates. Carry the top plate to another
-  // counter (empty, or with the same dish on top) until every counter holds
-  // one dish only.
-  const Sort = {
-    init(level) { return level.stacks.map((s) => [...s]); },
-    canMove(level, st, i, j) {
-      if (i === j || !st[i].length || st[j].length >= level.cap) return false;
-      return !st[j].length || st[j][st[j].length - 1] === st[i][st[i].length - 1];
-    },
-    move(level, st, i, j) {
-      if (!Sort.canMove(level, st, i, j)) return null;
-      const n = st.map((s) => [...s]);
-      n[j].push(n[i].pop());
-      return n;
-    },
-    won(level, st) {
-      return st.every((s) => !s.length || (s.length === level.cap && s.every((d) => d === s[0])));
-    },
-    solve(level) {
-      return bfs(Sort.init(level), (st) => st.map((s) => s.join('')).sort().join('|'),
-        (st) => {
-          const out = [];
-          for (let i = 0; i < st.length; i++) for (let j = 0; j < st.length; j++) {
-            const n = Sort.move(level, st, i, j);
-            if (n) out.push([[i, j], n]);
-          }
-          return out;
-        },
-        (st) => Sort.won(level, st));
-    },
-  };
-
-  // --------------------------------------------------------------- 5. deduce
-  // Overheard at the counter: work out who ordered what from what the
-  // regulars say, then serve everyone at once.
-  function permutations(a) {
-    if (a.length <= 1) return [a];
-    return a.flatMap((x, i) => permutations([...a.slice(0, i), ...a.slice(i + 1)]).map((p) => [x, ...p]));
-  }
-  const Deduce = {
-    permutations,
-    // clue: {t:'is'|'not'|'adj'|'left'|'end'|'mid', seat?, a?, b?}
-    holds(c, asg) {
-      const pos = (d) => asg.indexOf(d);
-      const n = asg.length;
-      switch (c.t) {
-        case 'is': return asg[c.seat] === c.a;
-        case 'not': return asg[c.seat] !== c.a;
-        case 'adj': return Math.abs(pos(c.a) - pos(c.b)) === 1;
-        case 'left': return pos(c.a) < pos(c.b);
-        case 'end': return pos(c.a) === 0 || pos(c.a) === n - 1;
-        case 'mid': return pos(c.a) !== 0 && pos(c.a) !== n - 1;
-        default: return false;
+      let [tx, ty] = STEP(nx, ny, dir);
+      const path = [];
+      let into = -1;
+      for (;;) {
+        const pi = Oden.potAt(b, tx, ty);
+        if (pi >= 0) { if (accepts(pi)) into = pi; break; }
+        if (isWall(b.map, tx, ty) || Oden.itemAt(s, tx, ty) >= 0) break;
+        path.push({ x: tx, y: ty });
+        if (!Oden.ice(b, tx, ty)) break;
+        [tx, ty] = STEP(tx, ty, dir);
       }
+      if (!path.length && into < 0) return null;
+      const items = s.items.filter((_, i) => i !== ii);
+      const prog = [...s.prog];
+      if (into >= 0) {
+        prog[into]++;
+      } else {
+        const end = path[path.length - 1];
+        items.push({ x: end.x, y: end.y, k: item.k });
+      }
+      return { state: { x: nx, y: ny, items, prog }, push: { from: { x: nx, y: ny }, path, into, k: item.k } };
     },
-    solutions(level) {
-      return permutations(level.dishes).filter((p) => level.clues.every((c) => Deduce.holds(c, p)));
+    key(s) { return `${s.x},${s.y}|${s.items.map((i) => `${i.k}${i.x},${i.y}`).sort().join(';')}|${s.prog.join(',')}`; },
+    won(b, s) { return b.pots.every((p, i) => s.prog[i] >= p.recipe.length); },
+    solve(b, opts = {}) {
+      return bfs(Oden.init(b), Oden.key,
+        (s) => DIR_LIST.map((d) => [d, Oden.move(b, s, d, opts)]).filter(([, r]) => r).map(([d, r]) => [d, r.state]),
+        (s) => Oden.won(b, s), 400000);
     },
   };
 
-  root.Logic = { DIRS, DIR_LIST, bfs, Slide, Pack, Stroke, Sort, Deduce };
+  // ---------------------------------------------------------------- 2. light
+  // Guide the lamp's light to the paper lanterns by pushing the folding
+  // mirror screens. Gimmicks: red paper (turns the light red for red
+  // lanterns), a bamboo blind (lets half the light through, reflects half).
+  const REFLECT = {
+    '/': { right: 'up', up: 'right', left: 'down', down: 'left' },
+    '\\': { right: 'down', down: 'right', left: 'up', up: 'left' },
+  };
+  const Light = {
+    // level: { map, src:{x,y,dir}, mirrors:[{x,y,o}], targets:[{x,y,red}], filters:[{x,y}], blinds:[{x,y,o}] }
+    parse(level) {
+      let start = null;
+      level.map.forEach((row, y) => [...row].forEach((c, x) => { if (c === 'P') start = { x, y }; }));
+      return { ...level, filters: level.filters || [], blinds: level.blinds || [], start };
+    },
+    init(b) { return { x: b.start.x, y: b.start.y, mirrors: b.mirrors.map((m) => ({ ...m })) }; },
+    solid(b, s, x, y) {
+      // things that stop the cat and the screens
+      if (isWall(b.map, x, y)) return 'wall';
+      if (b.src.x === x && b.src.y === y) return 'src';
+      if (b.targets.some((t) => t.x === x && t.y === y)) return 'target';
+      if (b.blinds.some((t) => t.x === x && t.y === y)) return 'blind';
+      if (s.mirrors.some((m) => m.x === x && m.y === y)) return 'mirror';
+      return null;
+    },
+    move(b, s, dir) {
+      const [nx, ny] = STEP(s.x, s.y, dir);
+      const what = Light.solid(b, s, nx, ny);
+      if (!what) return { state: { ...s, x: nx, y: ny }, push: null };
+      if (what !== 'mirror') return null;
+      const [tx, ty] = STEP(nx, ny, dir);
+      if (Light.solid(b, s, tx, ty) || b.filters.some((f) => f.x === tx && f.y === ty)) return null;
+      const mirrors = s.mirrors.map((m) => (m.x === nx && m.y === ny ? { ...m, x: tx, y: ty } : m));
+      return { state: { x: nx, y: ny, mirrors }, push: { from: { x: nx, y: ny }, to: { x: tx, y: ty } } };
+    },
+    // follow the light: segments for drawing and which lanterns are lit
+    trace(b, s) {
+      const segs = [];
+      const lit = b.targets.map(() => ({ any: false, red: false }));
+      const seen = new Set();
+      const queue = [{ x: b.src.x, y: b.src.y, dir: b.src.dir, red: false }];
+      while (queue.length) {
+        let { x, y, dir, red } = queue.shift();
+        for (let guard = 0; guard < 200; guard++) {
+          const [nx, ny] = STEP(x, y, dir);
+          const k = `${nx},${ny},${dir},${red}`;
+          if (seen.has(k)) break;
+          seen.add(k);
+          if (isWall(b.map, nx, ny) || (b.src.x === nx && b.src.y === ny)) { segs.push({ x, y, nx, ny, red, stop: true }); break; }
+          segs.push({ x, y, nx, ny, red });
+          x = nx; y = ny;
+          if (b.filters.some((f) => f.x === x && f.y === y)) red = true;
+          const ti = b.targets.findIndex((t) => t.x === x && t.y === y);
+          if (ti >= 0) { lit[ti].any = true; if (red) lit[ti].red = true; }
+          const m = s.mirrors.find((mm) => mm.x === x && mm.y === y);
+          if (m) { dir = REFLECT[m.o][dir]; continue; }
+          const bl = b.blinds.find((mm) => mm.x === x && mm.y === y);
+          if (bl) queue.push({ x, y, dir: REFLECT[bl.o][dir], red });
+        }
+      }
+      return { segs, lit };
+    },
+    litOk(b, lit, i) { return b.targets[i].red ? lit[i].red : lit[i].any; },
+    won(b, s) { const { lit } = Light.trace(b, s); return b.targets.every((_, i) => Light.litOk(b, lit, i)); },
+    key(s) { return `${s.x},${s.y}|${s.mirrors.map((m) => `${m.o}${m.x},${m.y}`).sort().join(';')}`; },
+    solve(b) {
+      return bfs(Light.init(b), Light.key,
+        (s) => DIR_LIST.map((d) => [d, Light.move(b, s, d)]).filter(([, r]) => r).map(([d, r]) => [d, r.state]),
+        (s) => Light.won(b, s), 300000);
+    },
+  };
+
+  // --------------------------------------------------------------- 3. fusuma
+  // An old inn with sliding doors. Push the fusuma along their tracks to
+  // reach the guest room. Gimmicks: paired doors (move together), a locked
+  // door (find the landlady's key first).
+  const Fusuma = {
+    // level: { map ('#' wall, '.' floor, 'P' cat, 'G' guest room, 'k' key), panels:[{x,y,len,axis:'h'|'v',lock?,link?}] }
+    parse(level) {
+      let start = null, goal = null, key = null;
+      level.map.forEach((row, y) => [...row].forEach((c, x) => {
+        if (c === 'P') start = { x, y };
+        if (c === 'G') goal = { x, y };
+        if (c === 'k') key = { x, y };
+      }));
+      return { map: level.map, panels: level.panels, start, goal, key };
+    },
+    cells(p, pos) { return Array.from({ length: p.len }, (_, i) => (p.axis === 'h' ? { x: pos.x + i, y: pos.y } : { x: pos.x, y: pos.y + i })); },
+    init(b) { return { x: b.start.x, y: b.start.y, pos: b.panels.map((p) => ({ x: p.x, y: p.y })), key: !b.key }; },
+    panelAt(b, s, x, y, skip = []) {
+      return b.panels.findIndex((p, i) => !skip.includes(i) && Fusuma.cells(p, s.pos[i]).some((c) => c.x === x && c.y === y));
+    },
+    move(b, s, dir) {
+      const [nx, ny] = STEP(s.x, s.y, dir);
+      if (isWall(b.map, nx, ny)) return null;
+      const pi = Fusuma.panelAt(b, s, nx, ny);
+      if (pi < 0) {
+        const key = s.key || (b.key && b.key.x === nx && b.key.y === ny);
+        return { state: { ...s, x: nx, y: ny, key }, push: null };
+      }
+      const p = b.panels[pi];
+      const along = p.axis === 'h' ? dir === 'left' || dir === 'right' : dir === 'up' || dir === 'down';
+      if (!along) return { blocked: 'across', panel: pi };
+      if (p.lock && !s.key) return { blocked: 'locked', panel: pi };
+      const moving = b.panels.map((q, i) => i).filter((i) => i === pi || (p.link && b.panels[i].link === p.link));
+      const [dx, dy] = DIRS[dir];
+      for (const i of moving) {
+        const q = b.panels[i];
+        if (i !== pi && q.axis !== p.axis) return { blocked: 'link', panel: pi };
+        for (const c of Fusuma.cells(q, { x: s.pos[i].x + dx, y: s.pos[i].y + dy })) {
+          if (isWall(b.map, c.x, c.y) || '.P'.indexOf(b.map[c.y][c.x]) < 0) return { blocked: 'jam', panel: pi };
+          if (Fusuma.panelAt(b, s, c.x, c.y, moving) >= 0) return { blocked: 'jam', panel: pi };
+          if (c.x === s.x && c.y === s.y) return { blocked: 'jam', panel: pi };
+        }
+      }
+      const pos = s.pos.map((q, i) => (moving.includes(i) ? { x: q.x + dx, y: q.y + dy } : q));
+      return { state: { ...s, x: nx, y: ny, pos }, push: { moving } };
+    },
+    won(b, s) { return s.x === b.goal.x && s.y === b.goal.y; },
+    key(s) { return `${s.x},${s.y},${s.key ? 1 : 0}|${s.pos.map((p) => `${p.x},${p.y}`).join(';')}`; },
+    solve(b) {
+      return bfs(Fusuma.init(b), Fusuma.key,
+        (s) => DIR_LIST.map((d) => [d, Fusuma.move(b, s, d)]).filter(([, r]) => r && r.state).map(([d, r]) => [d, r.state]),
+        (s) => Fusuma.won(b, s), 400000);
+    },
+  };
+
+  // ---------------------------------------------------------------- 4. dashi
+  // Turn the bamboo pipes so the stock reaches every bowl. Stocks that meet
+  // mix: katsuo + kombu = awase. Gimmicks: mixing, fixed iron pipes, a
+  // crossing that keeps two stocks apart, and spills (an open pipe end
+  // loses the stock).
+  // Openings: N=1 E=2 S=4 W=8
+  const OPEN = { N: 1, E: 2, S: 4, W: 8 };
+  const DIR_BIT = { up: 1, right: 2, down: 4, left: 8 };
+  const OPP = { 1: 4, 2: 8, 4: 1, 8: 2 };
+  const BIT_STEP = { 1: [0, -1], 2: [1, 0], 4: [0, 1], 8: [-1, 0] };
+  const BASE = { I: 5, L: 3, T: 14, X: 15, '.': 0 };
+  const rot = (m, r) => { for (let i = 0; i < r; i++) m = ((m << 1) | (m >> 3)) & 15; return m; };
+  const Dashi = {
+    // level: { tiles: rows of I/L/T/X/. and S (source) / B (bowl),
+    //          rot: rows of 0-3, fixed: ['x,y'], sources:[{x,y,f:'k'|'n',dir}], bowls:[{x,y,want,dir}], answer: rows of 0-3 }
+    OPEN, BASE, rot,
+    mask(level, r, x, y) {
+      const t = level.tiles[y][x];
+      if (t === 'S') return DIR_BIT[level.sources.find((s) => s.x === x && s.y === y).dir];
+      if (t === 'B') return DIR_BIT[level.bowls.find((s) => s.x === x && s.y === y).dir];
+      return rot(BASE[t] || 0, r[y][x]);
+    },
+    // channel of an opening: a crossing keeps N-S and E-W apart
+    chan(level, x, y, bit) { return level.tiles[y][x] === 'X' && (bit === 2 || bit === 8) ? 1 : 0; },
+    flow(level, r) {
+      const h = level.tiles.length, w = level.tiles[0].length;
+      const parent = {};
+      const find = (a) => { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; };
+      const node = (x, y, c) => { const k = `${x},${y},${c}`; if (!(k in parent)) parent[k] = k; return k; };
+      const union = (a, b) => { parent[find(a)] = find(b); };
+      const open = [];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const m = Dashi.mask(level, r, x, y);
+        for (const bit of [1, 2, 4, 8]) {
+          if (!(m & bit)) continue;
+          const a = node(x, y, Dashi.chan(level, x, y, bit));
+          const [dx, dy] = BIT_STEP[bit];
+          const nx = x + dx, ny = y + dy;
+          const nm = nx >= 0 && ny >= 0 && nx < w && ny < h ? Dashi.mask(level, r, nx, ny) : 0;
+          if (nm & OPP[bit]) union(a, node(nx, ny, Dashi.chan(level, nx, ny, OPP[bit])));
+          else open.push(a);
+        }
+      }
+      const flavours = {};
+      for (const s of level.sources) {
+        const c = find(node(s.x, s.y, 0));
+        flavours[c] = (flavours[c] || '') + s.f;
+      }
+      const spill = new Set(open.map(find));
+      // what each node carries, for drawing
+      const carry = (x, y, c) => { const k = `${x},${y},${c}`; return k in parent ? [...new Set(flavours[find(k)] || '')].sort().join('') : ''; };
+      const spilling = (x, y, c) => { const k = `${x},${y},${c}`; return k in parent && spill.has(find(k)) && !!flavours[find(k)]; };
+      const bowls = level.bowls.map((bw) => carry(bw.x, bw.y, 0));
+      const ok = level.bowls.every((bw, i) => bowls[i] === [...bw.want].sort().join(''))
+        && level.sources.every((s) => !spill.has(find(node(s.x, s.y, 0))));
+      return { carry, spilling, bowls, ok };
+    },
+    won(level, r) { return Dashi.flow(level, r).ok; },
+  };
+  root.Logic = { DIRS, DIR_LIST, bfs, Pack, Oden, Light, Fusuma, Dashi };
   if (typeof module !== 'undefined') module.exports = root.Logic;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 // Generated by tool/gen.js — do not edit by hand.
 (function (root) {
-  root.LEVELS = {"slide":[{"map":["######","#..G.#","##P.##","#...G#","#....#","######"],"par":5},{"map":["#######","#..GG.#","##....#","#P....#","#..o..#","#.G#.##","#######"],"par":8},{"map":["#######","#.....#","#.G...#","#.oP..#","##.##.#","#o..GG#","#...#.#","#######"],"par":11},{"map":["########","#o.P#.G#","#..G..G#","#.....##","##.#...#","#.G....#","#.#.o..#","########"],"par":14}],"pack":[{"box":["...","...","..#"],"pieces":[{"cells":[[0,0]],"kind":"hot","soup":true,"food":"miso"},{"cells":[[0,0],[1,0],[0,1]],"kind":"cold","food":"sushi"},{"cells":[[0,0],[1,0]],"kind":"plain","food":"dango"},{"cells":[[0,0],[0,1]],"kind":"plain","food":"dango"}]},{"box":["....","....","...."],"pieces":[{"cells":[[0,0],[1,0],[0,1]],"kind":"plain","food":"tamago"},{"cells":[[1,0],[0,1],[1,1],[0,2]],"kind":"cold","food":"salad"},{"cells":[[0,0],[0,1],[1,1],[2,1]],"kind":"plain","food":"bento"},{"cells":[[0,0]],"kind":"hot","soup":true,"food":"miso"}]},{"box":["#..#","....","....","...."],"pieces":[{"cells":[[0,0],[0,1],[0,2],[1,2]],"kind":"plain","food":"bento"},{"cells":[[1,0],[1,1],[0,2],[1,2]],"kind":"cold","food":"salad"},{"cells":[[0,0],[0,1]],"kind":"hot","soup":true,"food":"miso"},{"cells":[[0,0],[1,0],[0,1],[1,1]],"kind":"plain","food":"bento"}]},{"box":["..#..",".....",".....","#...."],"pieces":[{"cells":[[0,0],[1,0],[0,1],[1,1]],"kind":"plain","food":"bento"},{"cells":[[1,0],[2,0],[0,1],[1,1]],"kind":"cold","food":"salad"},{"cells":[[0,0],[0,1]],"kind":"hot","soup":true,"food":"miso"},{"cells":[[0,0],[1,0],[2,0],[0,1]],"kind":"plain","food":"bento"},{"cells":[[0,0],[1,0],[2,0],[3,0]],"kind":"hot","food":"ramen"}]}],"stroke":[{"map":["..65","12..","..4.","...3"]},{"map":["..1..","...#.",".....","3.5..","4...2"]},{"map":[".5.3.","...4.","..8#.",".6...","...2#","7...1"]},{"map":["..#2..","7.431.","..5..9","..#..a",".6....","..8..."]}],"sort":[{"cap":3,"stacks":["acb","abc","bca","",""],"par":8},{"cap":4,"stacks":["abca","cacc","babb","",""],"par":12},{"cap":4,"stacks":["dadc","abba","bdbc","cdca","",""],"par":16},{"cap":4,"stacks":["acee","adcb","acde","bcdd","babe","",""],"par":20}],"deduce":[{"dishes":["onigiri","soba","sushi"],"clues":[{"t":"left","a":"onigiri","b":"sushi"},{"t":"left","a":"sushi","b":"soba"}],"answer":["onigiri","sushi","soba"]},{"dishes":["ramen","gyoza","sushi","tamago"],"clues":[{"t":"left","a":"sushi","b":"ramen"},{"t":"end","a":"gyoza"},{"t":"left","a":"gyoza","b":"ramen"},{"t":"mid","a":"ramen"}],"answer":["gyoza","sushi","ramen","tamago"]},{"dishes":["gyoza","tamago","onigiri","sushi"],"clues":[{"t":"end","a":"tamago"},{"t":"end","a":"gyoza"},{"t":"left","a":"onigiri","b":"tamago"},{"t":"adj","a":"onigiri","b":"tamago"}],"answer":["gyoza","sushi","onigiri","tamago"]},{"dishes":["tamago","ramen","sushi","onigiri","gyoza"],"clues":[{"t":"adj","a":"onigiri","b":"tamago"},{"t":"left","a":"ramen","b":"sushi"},{"t":"adj","a":"gyoza","b":"ramen"},{"t":"left","a":"onigiri","b":"gyoza"},{"t":"adj","a":"gyoza","b":"tamago"}],"answer":["onigiri","tamago","gyoza","ramen","sushi"]}]};
+  root.LEVELS = {"pack":[{"box":["...","...","..#"],"pieces":[{"cells":[[0,0]],"kind":"cold","food":"purin"},{"cells":[[0,0],[0,1]],"kind":"hot","soup":true,"food":"miso"},{"cells":[[0,0],[0,1],[0,2]],"kind":"plain","food":"tamago"},{"cells":[[0,0]],"kind":"hot","food":"miso"},{"cells":[[0,0]],"kind":"cold","food":"purin"}]},{"box":["....","....","...."],"pieces":[{"cells":[[0,0],[0,1],[0,2]],"kind":"cold","food":"sushi"},{"cells":[[0,0]],"kind":"hot","soup":true,"food":"miso"},{"cells":[[1,0],[0,1],[1,1],[2,1]],"kind":"plain","food":"bento"},{"cells":[[1,0],[2,0],[0,1],[1,1]],"kind":"plain","food":"bento"}]},{"box":["#..#","....","....","...."],"pieces":[{"cells":[[0,0],[1,0],[2,0],[1,1]],"kind":"cold","food":"salad"},{"cells":[[0,0],[1,0]],"kind":"hot","soup":true,"food":"miso"},{"cells":[[0,0],[0,1],[1,1],[0,2]],"kind":"plain","food":"bento"},{"cells":[[0,0],[1,0],[0,1],[0,2]],"kind":"plain","food":"bento"}]},{"box":["..#..",".....",".....","#...."],"pieces":[{"cells":[[0,0]],"kind":"hot","soup":true,"food":"miso"},{"cells":[[0,0],[1,0],[2,0],[3,0]],"kind":"hot","food":"ramen"},{"cells":[[0,0],[1,0],[0,1],[1,1]],"kind":"cold","food":"salad"},{"cells":[[0,0],[0,1]],"kind":"cold","food":"soba"},{"cells":[[1,0],[0,1],[1,1],[0,2]],"kind":"plain","food":"bento"},{"cells":[[0,0],[1,0],[2,0]],"kind":"plain","food":"tamago"}]}],"oden":[{"map":["#######","#....##","#..g..#","#..e..#","#.PA#.#","#######"],"recipes":{"A":"ge"},"par":16},{"map":["#######","#...P##","#.#k..#","#B.c.A#","##..d.#","#.....#","#######"],"recipes":{"A":"kd","B":"c"},"par":24},{"map":["#######","##__P##","#...k_#","#.__d.#","#..Ae_#","#..._.#","#######"],"recipes":{"A":"edk"},"par":24},{"map":["#######","#.B._.#","#.#A__#","###_..#","#.dkg_#","#_...P#","#######"],"recipes":{"A":"dk","B":"g"},"par":30}],"light":[{"map":["######","#....#","#...P#","#....#","###..#","######"],"src":{"x":4,"y":3,"dir":"up"},"mirrors":[{"x":2,"y":2,"o":"\\"}],"targets":[{"x":1,"y":1}],"par":12},{"map":["#######","#..#.P#","#.#...#","#.....#","#.....#","#...#.#","#######"],"src":{"x":5,"y":5,"dir":"up"},"mirrors":[{"x":4,"y":3,"o":"/"},{"x":2,"y":4,"o":"\\"}],"targets":[{"x":4,"y":2},{"x":3,"y":2}],"par":18},{"map":["#######","#.....#","#.....#","#.....#","#.....#","###P.##","#######"],"src":{"x":4,"y":2,"dir":"left"},"mirrors":[{"x":2,"y":2,"o":"/"},{"x":2,"y":4,"o":"\\"}],"targets":[{"x":4,"y":1,"red":true},{"x":3,"y":2}],"filters":[{"x":3,"y":1}],"par":19},{"map":["#######","#.....#","#.P...#","#.....#","##...##","##....#","#######"],"src":{"x":3,"y":1,"dir":"down"},"mirrors":[{"x":4,"y":2,"o":"\\"},{"x":2,"y":3,"o":"\\"}],"targets":[{"x":1,"y":1},{"x":3,"y":2}],"blinds":[{"x":3,"y":5,"o":"/"}],"par":18}],"fusuma":[{"map":["########","#P....G#","#......#","#....#.#","#......#","########"],"panels":[{"x":2,"y":1,"len":3,"axis":"h"},{"x":2,"y":4,"len":2,"axis":"h"},{"x":5,"y":4,"len":2,"axis":"h"},{"x":2,"y":2,"len":2,"axis":"v"}],"par":13},{"map":["########","#...#..#","#P.....#","#..#...#","#......#","#.....G#","########"],"panels":[{"x":2,"y":2,"len":2,"axis":"h","link":"a"},{"x":4,"y":4,"len":2,"axis":"h","link":"a"},{"x":2,"y":5,"len":3,"axis":"h"},{"x":6,"y":2,"len":2,"axis":"v"}],"par":16},{"map":["########","#......#","#P.#...#","#.....G#","#..k...#","#......#","########"],"panels":[{"x":2,"y":1,"len":2,"axis":"h","lock":true},{"x":4,"y":3,"len":2,"axis":"v"},{"x":2,"y":5,"len":2,"axis":"h"},{"x":1,"y":3,"len":3,"axis":"v"},{"x":5,"y":3,"len":2,"axis":"v"}],"par":16},{"map":["########","#..k#..#","#......#","#......#","#..P..G#","#......#","########"],"panels":[{"x":4,"y":5,"len":2,"axis":"h","link":"a"},{"x":1,"y":4,"len":2,"axis":"h","link":"a"},{"x":5,"y":3,"len":2,"axis":"h"},{"x":1,"y":5,"len":2,"axis":"h"},{"x":4,"y":3,"len":2,"axis":"v","lock":true}],"par":11}],"dashi":[{"tiles":["LIIL","ILIL","BII.",".S.."],"sources":[{"x":1,"y":3,"f":"k","dir":"up"}],"bowls":[{"x":0,"y":2,"want":"k","dir":"up"}],"answer":["1112","0113","0000","0000"],"fixed":[],"rot":["2333","1021","3233","3010"]},{"tiles":["LLIIL",".ILSI","LTLSL","I..LL","LIB.."],"sources":[{"x":3,"y":2,"f":"k","dir":"right"},{"x":3,"y":1,"f":"n","dir":"left"}],"bowls":[{"x":2,"y":4,"want":"kn","dir":"left"}],"answer":["01112","00100","12303","00000","01000"],"fixed":[],"rot":["31331","21302","22010","32133","10200"]},{"tiles":["LILLL","SBLIL","LLIB.","LLI.L","S.L.L"],"sources":[{"x":0,"y":4,"f":"k","dir":"up"},{"x":0,"y":1,"f":"n","dir":"up"}],"bowls":[{"x":3,"y":2,"want":"k","dir":"left"},{"x":1,"y":1,"want":"n","dir":"right"}],"answer":["11200","00300","01100","13000","00000"],"fixed":["0,0","0,3","1,0"],"rot":["11113","20110","00213","10001","21333"]},{"tiles":["LIILL.","S.SXLI","LIBILL","ILILBL","LLLI..","..LI.L"],"sources":[{"x":2,"y":1,"f":"k","dir":"right"},{"x":0,"y":1,"f":"n","dir":"up"}],"bowls":[{"x":4,"y":3,"want":"k","dir":"right"},{"x":2,"y":2,"want":"n","dir":"left"}],"answer":["111200","000020","110002","011303","030000","000000"],"fixed":["3,2","1,3"],"rot":["322101","302231","230013","313010","221332","012200"]}]};
   if (typeof module !== 'undefined') module.exports = root.LEVELS;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
@@ -889,12 +991,54 @@ const Art = {
         E(x + r * 0.5, y + r * 0.3, r * 0.3, r * 0.2, '#7FB069', lw * 0.6);
         break;
       }
+      // oden
+      case 'daikon': {
+        E(x, y + r * 0.25, r * 0.8, r * 0.35, '#F3E7C4');
+        ctx.beginPath();
+        ctx.rect(x - r * 0.8, y - r * 0.3, r * 1.6, r * 0.55);
+        ctx.fillStyle = '#F3E7C4'; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x - r * 0.8, y - r * 0.3); ctx.lineTo(x - r * 0.8, y + r * 0.25); ctx.moveTo(x + r * 0.8, y - r * 0.3); ctx.lineTo(x + r * 0.8, y + r * 0.25);
+        ctx.lineWidth = lw; ctx.strokeStyle = C.ink; ctx.stroke();
+        E(x, y - r * 0.3, r * 0.8, r * 0.35, '#E6CFA0');
+        break;
+      }
+      case 'egg': {
+        E(x, y, r * 0.62, r * 0.82, '#C98A45');
+        E(x - r * 0.15, y - r * 0.25, r * 0.15, r * 0.22, 'rgba(255,255,255,.4)', 0);
+        break;
+      }
+      case 'chikuwa': {
+        ctx.save(); ctx.translate(x, y); ctx.rotate(-0.4);
+        Art.rr(ctx, -r, -r * 0.34, r * 2, r * 0.68, r * 0.34);
+        Art.inked(ctx, '#E9D2A0', lw);
+        ctx.fillStyle = '#B86F35';
+        ctx.fillRect(-r * 0.7, -r * 0.34, r * 1.4, r * 0.3);
+        E(r * 0.95, 0, r * 0.14, r * 0.3, '#7A4A2A', lw * 0.6);
+        ctx.restore();
+        break;
+      }
+      case 'konnyaku': {
+        ctx.beginPath(); ctx.moveTo(x, y - r * 0.8); ctx.lineTo(x + r * 0.85, y + r * 0.6); ctx.lineTo(x - r * 0.85, y + r * 0.6); ctx.closePath();
+        Art.inked(ctx, '#8C8A86', lw);
+        ctx.fillStyle = '#5E5C58';
+        for (const [dx, dy] of [[-0.2, 0.2], [0.2, 0.3], [0, -0.1], [-0.35, 0.45], [0.4, 0.45]]) ctx.fillRect(x + dx * r, y + dy * r, r * 0.07, r * 0.07);
+        break;
+      }
+      case 'ganmo': {
+        E(x, y, r * 0.85, r * 0.7, '#C9803F');
+        ctx.fillStyle = '#6E9C58';
+        ctx.fillRect(x - r * 0.3, y - r * 0.1, r * 0.12, r * 0.12);
+        ctx.fillStyle = '#D8433A';
+        ctx.fillRect(x + r * 0.2, y + r * 0.1, r * 0.12, r * 0.12);
+        break;
+      }
       default: E(x, y, r * 0.7, r * 0.7, '#ddd');
     }
   },
 };
 
 const FOOD_NAME = {
+  daikon: '大根', egg: '卵', chikuwa: 'ちくわ', konnyaku: 'こんにゃく', ganmo: 'がんも',
   ramen: 'ラーメン', soba: 'ざるそば', sushi: 'お寿司', tamago: '卵焼き', onigiri: 'おにぎり', gyoza: '餃子',
   miso: 'みそ汁', tempura: '天ぷら', purin: 'プリン', salad: 'サラダ', dango: 'だんご', bento: 'お弁当',
 };
@@ -905,9 +1049,9 @@ function wob(i, j, k = 0) {
   return s - Math.floor(s) - 0.5;
 }
 
-// The five mock games. Each one draws into a canvas of the width it is
+// The mock games. Each one draws into a canvas of the width it is
 // given and handles pointer input in canvas pixels (CSS px).
-const { Slide, Pack, Stroke, Sort, Deduce } = Logic;
+const { Pack } = Logic;
 const ease = (p) => 1 - Math.pow(1 - Math.min(1, Math.max(0, p)), 3);
 const now = () => performance.now() / 1000;
 
@@ -917,164 +1061,7 @@ function paperTile(ctx, x, y, w, h, fill) {
 }
 
 // ======================================================================
-// 1. すべって出前 — slide until something stops you
-// ======================================================================
-class SlideGame {
-  constructor(level, api) {
-    this.api = api;
-    this.level = level;
-    this.b = Slide.parse(level.map);
-    this.s = Slide.init(this.b);
-    this.hist = [];
-    this.moves = 0;
-    this.anim = null;
-    this.facing = 'down';
-    this.foods = ['ramen', 'sushi', 'tamago', 'gyoza', 'soba'];
-    this.servedAt = {};
-  }
-  layout(w) {
-    this.cell = Math.floor(Math.min(w / this.b.w, 64));
-    this.ox = Math.floor((w - this.cell * this.b.w) / 2);
-    this.oy = 6;
-    return this.cell * this.b.h + 12;
-  }
-  status() { return { moves: this.moves, par: this.level.par }; }
-  canUndo() { return this.hist.length > 0 && !this.anim; }
-  undo() {
-    if (!this.canUndo()) return;
-    this.s = this.hist.pop();
-    this.moves--;
-  }
-  go(dir) {
-    if (this.anim || Slide.won(this.b, this.s)) return;
-    const r = Slide.move(this.b, this.s, dir);
-    this.facing = dir;
-    if (!r) { this.bump = { dir, t: now() }; return; }
-    this.hist.push(this.s);
-    this.anim = { from: this.s, r, t0: now(), dur: 0.09 * Math.max(1, r.path.length) + 0.05 };
-    this.moves++;
-  }
-  down(x, y) { this.p0 = { x, y }; }
-  up(x, y) {
-    if (!this.p0) return;
-    let dx = x - this.p0.x, dy = y - this.p0.y;
-    if (Math.hypot(dx, dy) < 14) {
-      // a tap: go towards it from the cat
-      const c = this.cellCenter(this.s.x, this.s.y);
-      dx = x - c.x; dy = y - c.y;
-      if (Math.hypot(dx, dy) < this.cell * 0.4) { this.p0 = null; return; }
-    }
-    this.go(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
-    this.p0 = null;
-  }
-  key(k) {
-    const m = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[k];
-    if (m) this.go(m);
-  }
-  cellCenter(x, y) { return { x: this.ox + (x + 0.5) * this.cell, y: this.oy + (y + 0.5) * this.cell }; }
-  draw(ctx, t) {
-    const { b, cell: u } = this;
-    // finish the slide
-    let pos = { x: this.s.x, y: this.s.y };
-    let served = this.s.served;
-    if (this.anim) {
-      const a = this.anim;
-      const p = (now() - a.t0) / a.dur;
-      if (p >= 1) {
-        this.s = a.r.state;
-        if (a.r.served >= 0) this.servedAt[a.r.served] = now();
-        this.anim = null;
-        pos = { x: this.s.x, y: this.s.y };
-        served = this.s.served;
-        if (Slide.won(b, this.s)) setTimeout(() => this.api.won(this.status()), 600);
-      } else {
-        const pts = [{ x: a.from.x, y: a.from.y }, ...a.r.path];
-        const q = ease(p) * (pts.length - 1);
-        const i = Math.min(pts.length - 2, Math.floor(q));
-        const f = q - i;
-        pos = pts.length > 1 ? { x: pts[i].x + (pts[i + 1].x - pts[i].x) * f, y: pts[i].y + (pts[i + 1].y - pts[i].y) * f } : pts[0];
-        served = a.from.served;
-      }
-    }
-    // floor: wet paving stones
-    for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
-      const c = b.map[y][x];
-      const X = this.ox + x * u, Y = this.oy + y * u;
-      if (c === '#') continue;
-      paperTile(ctx, X, Y, u + 0.5, u + 0.5, (x + y) % 2 ? '#DCD6CA' : '#D3CDC0');
-      ctx.strokeStyle = 'rgba(58,43,34,.18)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(X + 0.5, Y + 0.5, u - 1, u - 1);
-      // a sheen of rain water
-      ctx.strokeStyle = 'rgba(255,255,255,.55)';
-      ctx.lineWidth = Math.max(1, u * 0.04);
-      ctx.beginPath();
-      const k = wob(x, y) * u * 0.3;
-      ctx.moveTo(X + u * 0.2 + k, Y + u * 0.7);
-      ctx.lineTo(X + u * 0.45 + k, Y + u * 0.62);
-      ctx.stroke();
-      if (c === 'o') {
-        Art.rr(ctx, X + u * 0.08, Y + u * 0.08, u * 0.84, u * 0.84, u * 0.08);
-        Art.inked(ctx, '#D8B96E', Math.max(1, u * 0.035));
-        ctx.strokeStyle = 'rgba(122,90,40,.45)';
-        ctx.lineWidth = Math.max(1, u * 0.025);
-        for (let i = 1; i < 6; i++) {
-          ctx.beginPath();
-          ctx.moveTo(X + u * 0.1, Y + u * (0.08 + i * 0.14));
-          ctx.lineTo(X + u * 0.9, Y + u * (0.08 + i * 0.14));
-          ctx.stroke();
-        }
-      }
-    }
-    // walls: wooden crates and shop fronts, seen from above
-    for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
-      if (b.map[y][x] !== '#') continue;
-      const X = this.ox + x * u, Y = this.oy + y * u;
-      const edge = x === 0 || y === 0 || x === b.w - 1 || y === b.h - 1;
-      paperTile(ctx, X, Y, u + 0.5, u + 0.5, edge ? '#8C6B50' : '#B98A5E');
-      if (!edge) {
-        Art.rr(ctx, X + u * 0.1, Y + u * 0.1, u * 0.8, u * 0.8, u * 0.06);
-        Art.inked(ctx, '#C9995F', Math.max(1, u * 0.04));
-        ctx.beginPath();
-        ctx.moveTo(X + u * 0.1, Y + u * 0.1); ctx.lineTo(X + u * 0.9, Y + u * 0.9);
-        ctx.moveTo(X + u * 0.9, Y + u * 0.1); ctx.lineTo(X + u * 0.1, Y + u * 0.9);
-        ctx.stroke();
-      } else {
-        ctx.fillStyle = 'rgba(0,0,0,.08)';
-        if ((x + y) % 2) ctx.fillRect(X, Y, u, u);
-      }
-    }
-    // guests
-    b.guests.forEach((g, i) => {
-      const c = this.cellCenter(g.x, g.y);
-      const done = !!(served & (1 << i));
-      Art.guest(ctx, c.x, c.y - u * 0.05, u * 0.3, i, { happy: done, t });
-      Art.ticket(ctx, c.x + u * 0.3, c.y - u * 0.34, u * 0.34, this.foods[i], { done });
-    });
-    // cat
-    const c = this.cellCenter(pos.x, pos.y);
-    let bx = 0, by = 0;
-    if (this.bump && now() - this.bump.t < 0.25) {
-      const d = Logic.DIRS[this.bump.dir];
-      const k = Math.sin((now() - this.bump.t) / 0.25 * Math.PI) * u * 0.08;
-      bx = d[0] * k; by = d[1] * k;
-    }
-    const left = b.guests.filter((_, i) => !(served & (1 << i))).length;
-    const carry = this.foods.slice(0, b.guests.length).filter((_, i) => !(served & (1 << i))).slice(0, 3);
-    Art.cat(ctx, c.x + bx, c.y - u * 0.18 + by, u * 0.24, { facing: this.facing, t, carry: left ? carry : [], happy: !left });
-    // flying dish to a just-served guest
-    for (const [i, t0] of Object.entries(this.servedAt)) {
-      const q = (now() - t0) / 0.5;
-      if (q > 1) continue;
-      const g = b.guests[i];
-      const to = this.cellCenter(g.x, g.y);
-      Art.plate(ctx, c.x + (to.x - c.x) * ease(q), c.y - u * 0.5 + (to.y - c.y) * ease(q) - Math.sin(q * Math.PI) * u * 0.4, u * 0.3, this.foods[i]);
-    }
-  }
-}
-
-// ======================================================================
-// 2. おかもち詰め — pack the delivery box
+// 0. おかもち詰め (kept from the first round) — pack the delivery box
 // ======================================================================
 class PackGame {
   constructor(level, api) {
@@ -1288,368 +1275,596 @@ class PackGame {
 }
 
 // ======================================================================
-// 3. ひとふで出前 — one round through every lane
+// Shared: a cat walking a grid, pushing things (oden, light, fusuma)
 // ======================================================================
-class StrokeGame {
-  constructor(level, api) {
+class GridGame {
+  constructor(level, api, rules, board) {
     this.api = api;
     this.level = level;
-    this.b = Stroke.parse(level.map);
-    this.path = [this.b.start];
+    this.R = rules;
+    this.b = board;
+    this.s = rules.init(board);
+    this.prev = this.s;
     this.hist = [];
     this.moves = 0;
+    this.facing = 'down';
+    this.anim = null;
+    this.W = (board.map || level.map)[0].length;
+    this.H = (board.map || level.map).length;
   }
   layout(w) {
-    this.cell = Math.floor(Math.min(w / this.b.w, 70));
-    this.ox = Math.floor((w - this.cell * this.b.w) / 2);
+    this.u = Math.floor(Math.min(w / this.W, 60));
+    this.ox = Math.floor((w - this.u * this.W) / 2);
     this.oy = 8;
-    return this.cell * this.b.h + 16;
+    return this.u * this.H + 16;
   }
-  status() { return { moves: this.path.length, par: this.b.open, label: `${this.path.length}/${this.b.open}マス` }; }
-  canUndo() { return this.path.length > 1; }
-  undo() { if (this.path.length > 1) this.path.pop(); }
-  at(x, y) { return { x: Math.floor((x - this.ox) / this.cell), y: Math.floor((y - this.oy) / this.cell) }; }
-  down(x, y) {
-    const c = this.at(x, y);
-    const i = this.path.findIndex((p) => p.x === c.x && p.y === c.y);
-    // touching the walked line picks the round up from there
-    if (i >= 0) this.path = this.path.slice(0, i + 1);
-    this.dragging = true;
-    this.move(x, y);
+  status() { return { moves: this.moves, par: this.level.par }; }
+  canUndo() { return this.hist.length > 0; }
+  undo() {
+    if (!this.hist.length) return;
+    this.s = this.hist.pop();
+    this.prev = this.s;
+    this.anim = null;
+    this.moves--;
   }
-  move(x, y) {
-    if (!this.dragging) return;
-    const c = this.at(x, y);
-    const end = this.path[this.path.length - 1];
-    if (c.x === end.x && c.y === end.y) return;
-    const prev = this.path[this.path.length - 2];
-    if (prev && c.x === prev.x && c.y === prev.y) { this.path.pop(); return; }
-    if (Stroke.canStep(this.b, this.path, c.x, c.y)) {
-      this.path.push(c);
-      if (Stroke.won(this.b, this.path)) { this.dragging = false; setTimeout(() => this.api.won(this.status()), 500); }
+  won() { return this.R.won(this.b, this.s); }
+  go(dir) {
+    if (this.won()) return;
+    if (this.anim && now() - this.anim.t0 < this.anim.dur * 0.6) return;
+    this.facing = dir;
+    const r = this.R.move(this.b, this.s, dir);
+    if (!r || !r.state) { this.bump = { dir, t: now(), info: r }; return; }
+    this.hist.push(this.s);
+    this.prev = this.s;
+    this.s = r.state;
+    this.last = r;
+    this.anim = { t0: now(), dur: 0.14 + (r.push && r.push.path ? r.push.path.length * 0.06 : 0) };
+    this.moves++;
+    if (this.won()) setTimeout(() => this.api.won(this.status()), 650);
+  }
+  p() { return this.anim ? Math.min(1, (now() - this.anim.t0) / this.anim.dur) : 1; }
+  cellC(x, y) { return { x: this.ox + (x + 0.5) * this.u, y: this.oy + (y + 0.5) * this.u }; }
+  catAt() {
+    const e = ease(this.p());
+    const x = this.prev.x + (this.s.x - this.prev.x) * e, y = this.prev.y + (this.s.y - this.prev.y) * e;
+    let bx = 0, by = 0;
+    if (this.bump && now() - this.bump.t < 0.25) {
+      const d = Logic.DIRS[this.bump.dir];
+      const k = Math.sin(((now() - this.bump.t) / 0.25) * Math.PI) * this.u * 0.1;
+      bx = d[0] * k; by = d[1] * k;
     }
+    const c = this.cellC(x, y);
+    return { x: c.x + bx, y: c.y + by };
   }
-  up() { this.dragging = false; }
+  bumped(since = 0.4) { return this.bump && now() - this.bump.t < since ? this.bump : null; }
+  down(x, y) { this.p0 = { x, y }; }
+  up(x, y) {
+    if (!this.p0) return;
+    let dx = x - this.p0.x, dy = y - this.p0.y;
+    this.p0 = null;
+    if (Math.hypot(dx, dy) < 14) {
+      const c = this.cellC(this.s.x, this.s.y);
+      dx = x - c.x; dy = y - c.y;
+      if (Math.hypot(dx, dy) < this.u * 0.4) return;
+    }
+    this.go(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+  }
+  key(k) {
+    const m = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[k];
+    if (m) this.go(m);
+  }
+  drawCat(ctx, t, o = {}) {
+    const c = this.catAt();
+    Art.cat(ctx, c.x, c.y - this.u * 0.16, this.u * 0.23, { facing: this.facing, t, happy: this.won(), ...o });
+  }
+}
+
+// ======================================================================
+// 1. おでん仕込み — push the ingredients into the pot, in recipe order
+// ======================================================================
+const ODEN = { d: 'daikon', e: 'egg', c: 'chikuwa', k: 'konnyaku', g: 'ganmo' };
+const POT_MARK = [['一', '#C8452F'], ['二', '#2F4B6B']];
+class OdenGame extends GridGame {
+  constructor(level, api) {
+    const b = Logic.Oden.parse(level);
+    super(level, api, Logic.Oden, b);
+  }
+  layout(w) {
+    const h = super.layout(w);
+    this.w = w;
+    this.oy += 52; // recipe cards above the kitchen
+    return h + 52;
+  }
   draw(ctx, t) {
-    const { b, cell: u } = this;
-    for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+    const { b, u } = this;
+    const s = this.s, P = this.p();
+    for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) {
       const X = this.ox + x * u, Y = this.oy + y * u;
-      if (b.map[y][x] === '#') {
-        // a garden: shrubs over a hedge
-        paperTile(ctx, X, Y, u + 0.5, u + 0.5, '#9DBB7E');
-        for (let k = 0; k < 3; k++) Art.ellipse(ctx, X + u * (0.3 + 0.2 * k), Y + u * (0.4 + 0.15 * (k % 2)), u * 0.22, u * 0.2, '#7FA360', Math.max(1, u * 0.03));
+      const c = b.map[y][x];
+      if (c === '#') {
+        paperTile(ctx, X, Y, u + 0.5, u + 0.5, '#9A7250');
+        ctx.fillStyle = 'rgba(255,255,255,.08)';
+        ctx.fillRect(X, Y + u * 0.1, u, u * 0.12);
         continue;
       }
-      paperTile(ctx, X, Y, u + 0.5, u + 0.5, (x + y) % 2 ? '#EFE5D1' : '#E8DCC4');
-      ctx.strokeStyle = 'rgba(58,43,34,.14)';
+      paperTile(ctx, X, Y, u + 0.5, u + 0.5, (x + y) % 2 ? '#EAD9B8' : '#E3CFAA');
+      ctx.strokeStyle = 'rgba(58,43,34,.12)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(X + 0.5, Y + 0.5, u - 1, u - 1);
-    }
-    // the walked line
-    const P = this.path.map((p) => ({ x: this.ox + (p.x + 0.5) * u, y: this.oy + (p.y + 0.5) * u }));
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(200,69,47,.28)';
-    ctx.lineWidth = u * 0.34;
-    ctx.beginPath();
-    P.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
-    ctx.stroke();
-    // paw prints along it
-    for (let i = 1; i < P.length; i++) {
-      const a = P[i - 1], c = P[i];
-      const ang = Math.atan2(c.y - a.y, c.x - a.x);
-      const mx = (a.x + c.x) / 2, my = (a.y + c.y) / 2;
-      ctx.save();
-      ctx.translate(mx, my);
-      ctx.rotate(ang + Math.PI / 2);
-      ctx.fillStyle = 'rgba(58,43,34,.35)';
-      Art.ellipse(ctx, (i % 2 ? -1 : 1) * u * 0.06, 0, u * 0.05, u * 0.065, 'rgba(58,43,34,.35)');
-      ctx.restore();
-    }
-    // houses with numbered door plates
-    const next = Stroke.nextNumber(b, this.path);
-    for (const [k, n] of Object.entries(b.nums)) {
-      const [x, y] = k.split(',').map(Number);
-      const X = this.ox + (x + 0.5) * u, Y = this.oy + (y + 0.5) * u;
-      const visited = this.path.some((p) => p.x === x && p.y === y);
-      if (n === 1) {
-        // the shop: a small noren
-        Art.rr(ctx, X - u * 0.36, Y - u * 0.38, u * 0.72, u * 0.34, u * 0.05);
-        Art.inked(ctx, C.noren, Math.max(1, u * 0.03));
-        ctx.fillStyle = '#F6EEDF';
-        ctx.font = `${u * 0.24}px "Yusei Magic", sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('出', X, Y - u * 0.2);
-        continue;
+      ctx.beginPath(); ctx.moveTo(X, Y + u * 0.5); ctx.lineTo(X + u, Y + u * 0.5); ctx.stroke();
+      if (c === '_') {
+        // slippery wet boards
+        Art.rr(ctx, X + 2, Y + 2, u - 4, u - 4, u * 0.1);
+        ctx.fillStyle = 'rgba(134,184,218,.55)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.8)';
+        ctx.lineWidth = Math.max(1, u * 0.04);
+        ctx.beginPath(); ctx.moveTo(X + u * 0.2, Y + u * 0.35); ctx.lineTo(X + u * 0.45, Y + u * 0.25); ctx.moveTo(X + u * 0.55, Y + u * 0.72); ctx.lineTo(X + u * 0.8, Y + u * 0.62); ctx.stroke();
       }
-      ctx.save();
-      if (n === next && !visited) {
-        ctx.shadowColor = C.glow;
-        ctx.shadowBlur = 10 + 6 * Math.sin(t * 4);
+    }
+    // pots with their recipe cards
+    const bump = this.bumped(0.6);
+    b.pots.forEach((pot, i) => {
+      const c = this.cellC(pot.x, pot.y);
+      Art.ellipse(ctx, c.x, c.y + u * 0.08, u * 0.44, u * 0.34, '#4A3A30', Math.max(1.2, u * 0.04));
+      Art.ellipse(ctx, c.x, c.y - u * 0.02, u * 0.36, u * 0.22, '#C99A55', Math.max(1, u * 0.03));
+      // what is already in the pot
+      pot.recipe.slice(0, s.prog[i]).split('').forEach((k, j) => Art.food(ctx, ODEN[k], c.x + (j - 1) * u * 0.18, c.y - u * 0.04, u * 0.1));
+      // steam
+      ctx.strokeStyle = 'rgba(255,255,255,.7)';
+      ctx.lineWidth = Math.max(1, u * 0.03);
+      for (const k of [-1, 1]) {
+        const sway = Math.sin(t * 2 + k) * u * 0.04;
+        ctx.beginPath(); ctx.moveTo(c.x + k * u * 0.12, c.y - u * 0.2); ctx.quadraticCurveTo(c.x + k * u * 0.2 + sway, c.y - u * 0.35, c.x + k * u * 0.1, c.y - u * 0.48); ctx.stroke();
       }
-      Art.ellipse(ctx, X, Y, u * 0.26, u * 0.26, visited ? '#F3D9C9' : '#FFFBF2', Math.max(1.2, u * 0.04));
-      ctx.restore();
-      ctx.fillStyle = visited ? C.shu : C.ink;
-      ctx.font = `${u * 0.3}px "Yusei Magic", sans-serif`;
+      // a mark on the pot matching its recipe card
+      const [ch, col] = POT_MARK[i];
+      Art.ellipse(ctx, c.x + u * 0.34, c.y - u * 0.3, u * 0.14, u * 0.14, col, 1.2);
+      ctx.fillStyle = '#FFF7EA';
+      ctx.font = `${u * 0.18}px "Yusei Magic", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(n === b.last ? '終' : String(n), X, Y + 1);
+      ctx.fillText(ch, c.x + u * 0.34, c.y - u * 0.29);
+    });
+    // recipe cards: ingredients in order, the next one marked
+    const wrongPot = bump && bump.info === null ? (() => {
+      const [dx, dy] = Logic.DIRS[bump.dir];
+      const it = s.items.find((q) => q.x === s.x + dx && q.y === s.y + dy);
+      return it ? b.pots.findIndex((pp) => pp.x === it.x + dx && pp.y === it.y + dy) : -1;
+    })() : -1;
+    let rx = 8;
+    b.pots.forEach((pot, i) => {
+      const n = pot.recipe.length;
+      const cw = 34;
+      const W = 30 + n * cw;
+      const shake = wrongPot === i ? Math.sin((now() - bump.t) * 50) * 3 : 0;
+      const X = rx + shake, Y = 6;
+      Art.rr(ctx, X, Y, W, 40, 5);
+      Art.inked(ctx, '#FFFBF2', 1.4);
+      const [ch, col] = POT_MARK[i];
+      Art.ellipse(ctx, X + 15, Y + 20, 10, 10, col, 1.2);
+      ctx.fillStyle = '#FFF7EA';
+      ctx.font = '13px "Yusei Magic", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ch, X + 15, Y + 21);
+      pot.recipe.split('').forEach((k, j) => {
+        const done = j < s.prog[i], next = j === s.prog[i];
+        const cx = X + 30 + (j + 0.5) * cw;
+        if (next) {
+          ctx.strokeStyle = wrongPot === i ? C.shu : '#E0A93A';
+          ctx.lineWidth = 2.2;
+          Art.rr(ctx, cx - cw / 2 + 2, Y + 4, cw - 4, 32, 4);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = done ? 0.3 : 1;
+        Art.food(ctx, ODEN[k], cx, Y + 20, 11);
+        ctx.globalAlpha = 1;
+        if (done) Art.hanko(ctx, cx + 8, Y + 12, 7, '済');
+        if (j < n - 1) { ctx.fillStyle = C.inkSoft; ctx.font = '10px sans-serif'; ctx.fillText('›', cx + cw / 2, Y + 20); }
+      });
+      rx += W + 10;
+    });
+    // ingredients (the one just pushed slides along its path)
+    const push = this.anim && P < 1 && this.last && this.last.push;
+    s.items.forEach((it) => {
+      let c = this.cellC(it.x, it.y);
+      if (push && push.into < 0 && push.path.length && push.path[push.path.length - 1].x === it.x && push.path[push.path.length - 1].y === it.y) {
+        const a = this.cellC(push.from.x, push.from.y);
+        c = { x: a.x + (c.x - a.x) * ease(P), y: a.y + (c.y - a.y) * ease(P) };
+      }
+      Art.shadow(ctx, c.x, c.y + u * 0.28, u * 0.28, u * 0.08);
+      Art.food(ctx, ODEN[it.k], c.x, c.y, u * 0.3);
+    });
+    if (push && push.into >= 0) {
+      const a = this.cellC(push.from.x, push.from.y), pot = b.pots[push.into], z = this.cellC(pot.x, pot.y);
+      const e = ease(P);
+      Art.food(ctx, ODEN[push.k], a.x + (z.x - a.x) * e, a.y + (z.y - a.y) * e - Math.sin(e * Math.PI) * u * 0.3, u * 0.3 * (1 - e * 0.5));
     }
-    // the cat at the head of the line
-    const e = this.path[this.path.length - 1], p = this.path[this.path.length - 2];
-    const facing = !p ? 'down' : e.x > p.x ? 'right' : e.x < p.x ? 'left' : e.y < p.y ? 'up' : 'down';
-    const E = P[P.length - 1];
-    Art.cat(ctx, E.x, E.y - u * 0.18, u * 0.2, { facing, t, carry: this.path.length === b.open ? [] : ['bento'] });
+    this.drawCat(ctx, t);
   }
 }
 
 // ======================================================================
-// 4. 皿そろえ屋台 — sort the plates at the stall
+// 2. あかり届け — push the folding mirrors to light the lanterns
 // ======================================================================
-const SORT_FOOD = { a: 'ramen', b: 'sushi', c: 'tamago', d: 'dango', e: 'onigiri' };
-class SortGame {
+class LightGame extends GridGame {
   constructor(level, api) {
-    this.api = api;
-    this.level = { cap: level.cap, stacks: level.stacks.map((s) => [...s]) };
-    this.par = level.par;
-    this.st = Sort.init(this.level);
-    this.hist = [];
-    this.moves = 0;
-    this.held = null;
-    this.catAt = 0;
-    this.catX = null;
-  }
-  layout(w) {
-    const n = this.st.length;
-    this.cw = Math.floor(Math.min((w - 16) / n, 84));
-    this.ox = Math.floor((w - this.cw * n) / 2);
-    this.ph = Math.floor(this.cw * 0.42);
-    this.top = Math.floor(this.cw * 0.95);
-    this.base = this.top + this.ph * this.level.cap + 22;
-    return this.base + 30;
-  }
-  status() { return { moves: this.moves, par: this.par }; }
-  canUndo() { return this.hist.length > 0 && !this.held; }
-  undo() { if (this.canUndo()) { this.st = this.hist.pop(); this.moves--; } }
-  complete(s) { return s.length === this.level.cap && s.every((d) => d === s[0]); }
-  down(x) {
-    const i = Math.floor((x - this.ox) / this.cw);
-    if (i < 0 || i >= this.st.length) return;
-    this.catAt = i;
-    if (this.held === null) {
-      if (!this.st[i].length || this.complete(this.st[i])) { this.wobble = { i, t: now() }; return; }
-      this.held = i;
-      return;
-    }
-    if (i === this.held) { this.held = null; return; }
-    const n = Sort.move(this.level, this.st, this.held, i);
-    if (!n) { this.wobble = { i, t: now() }; return; }
-    this.hist.push(this.st);
-    this.st = n;
-    this.moves++;
-    this.held = null;
-    if (Sort.won(this.level, this.st)) setTimeout(() => this.api.won(this.status()), 600);
+    const b = Logic.Light.parse(level);
+    super(level, api, Logic.Light, b);
   }
   draw(ctx, t) {
-    const { cw, ox, ph } = this;
-    const cap = this.level.cap;
-    // the stall roof
-    ctx.fillStyle = '#F6E7C8';
-    for (let i = 0; i < this.st.length; i++) {
-      const X = ox + i * cw;
-      Art.rr(ctx, X + 4, this.base - ph * cap - 14, cw - 8, ph * cap + 14, 6);
-      Art.inked(ctx, 'rgba(255,251,242,.6)', 1);
+    const { b, u } = this;
+    const s = this.s, P = this.p();
+    for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) {
+      const X = this.ox + x * u, Y = this.oy + y * u;
+      if (b.map[y][x] === '#') { paperTile(ctx, X, Y, u + 0.5, u + 0.5, '#2E2833'); continue; }
+      paperTile(ctx, X, Y, u + 0.5, u + 0.5, (x + y) % 2 ? '#4A4552' : '#443F4C');
+      ctx.strokeStyle = 'rgba(255,255,255,.05)';
+      ctx.strokeRect(X + 0.5, Y + 0.5, u - 1, u - 1);
     }
-    // counters
-    for (let i = 0; i < this.st.length; i++) {
-      const X = ox + i * cw;
-      Art.rr(ctx, X + 3, this.base, cw - 6, 14, 3);
-      Art.inked(ctx, C.wood, 1.6);
-      const s = this.st[i];
-      const shake = this.wobble && this.wobble.i === i && now() - this.wobble.t < 0.35 ? Math.sin((now() - this.wobble.t) * 60) * 3 : 0;
-      s.forEach((d, k) => {
-        if (this.held === i && k === s.length - 1) return;
-        Art.plate(ctx, X + cw / 2 + shake, this.base - ph * (k + 0.55), cw * 0.62, SORT_FOOD[d]);
-      });
-      if (this.complete(s)) Art.hanko(ctx, X + cw - 14, this.base - ph * cap - 4, 11, '完');
+    for (const f of b.filters) {
+      const c = this.cellC(f.x, f.y);
+      Art.rr(ctx, c.x - u * 0.4, c.y - u * 0.4, u * 0.8, u * 0.8, u * 0.06);
+      ctx.fillStyle = 'rgba(214,64,52,.55)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,190,180,.7)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     }
-    // the cat walks to the chosen counter, carrying the lifted plate
-    const target = ox + this.catAt * cw + cw / 2;
-    this.catX = this.catX === null ? target : this.catX + (target - this.catX) * 0.25;
-    const carry = this.held !== null ? [SORT_FOOD[this.st[this.held][this.st[this.held].length - 1]]] : [];
-    const r = Math.min(cw * 0.2, 18);
-    Art.cat(ctx, this.catX, this.top - r * 1.9, r, { facing: 'down', t, carry, happy: Sort.won(this.level, this.st) });
+    // the light
+    const { segs, lit } = Logic.Light.trace(b, s);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    for (const g of segs) {
+      const a = this.cellC(g.x, g.y), z = this.cellC(g.nx, g.ny);
+      const zz = g.stop ? { x: (a.x + z.x) / 2 + (z.x - a.x) * 0.0, y: (a.y + z.y) / 2 } : z;
+      for (const [wdt, al] of [[u * 0.34, 0.12], [u * 0.14, 0.35], [u * 0.05, 0.9]]) {
+        ctx.strokeStyle = g.red ? `rgba(255,90,70,${al})` : `rgba(255,214,120,${al})`;
+        ctx.lineWidth = wdt;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(zz.x, zz.y); ctx.stroke();
+      }
+    }
+    ctx.restore();
+    // the lamp
+    const sc = this.cellC(b.src.x, b.src.y);
+    Art.rr(ctx, sc.x - u * 0.22, sc.y - u * 0.3, u * 0.44, u * 0.56, u * 0.05);
+    Art.inked(ctx, '#FFF3D6', Math.max(1.2, u * 0.035));
+    const [ddx, ddy] = Logic.DIRS[b.src.dir];
+    Art.ellipse(ctx, sc.x + ddx * u * 0.28, sc.y + ddy * u * 0.28, u * 0.08, u * 0.08, C.glow, 1);
+    // lanterns
+    b.targets.forEach((tg, i) => {
+      const c = this.cellC(tg.x, tg.y);
+      const on = Logic.Light.litOk(b, lit, i);
+      if (on) {
+        const g = ctx.createRadialGradient(c.x, c.y, 2, c.x, c.y, u * 0.7);
+        g.addColorStop(0, tg.red ? 'rgba(255,110,90,.6)' : 'rgba(255,210,120,.6)');
+        g.addColorStop(1, 'rgba(255,200,120,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(c.x - u, c.y - u, u * 2, u * 2);
+      }
+      ctx.fillStyle = C.ink;
+      ctx.fillRect(c.x - u * 0.16, c.y - u * 0.36, u * 0.32, u * 0.07);
+      ctx.fillRect(c.x - u * 0.16, c.y + u * 0.29, u * 0.32, u * 0.07);
+      Art.ellipse(ctx, c.x, c.y, u * 0.26, u * 0.3, tg.red ? (on ? '#FF6B55' : '#9E3A30') : on ? '#FFE9B0' : '#CFC6B8', Math.max(1.2, u * 0.035));
+      ctx.strokeStyle = 'rgba(58,43,34,.35)';
+      ctx.lineWidth = 1;
+      for (const k of [-0.12, 0, 0.12]) { ctx.beginPath(); ctx.moveTo(c.x - u * 0.25, c.y + k * u); ctx.lineTo(c.x + u * 0.25, c.y + k * u); ctx.stroke(); }
+    });
+    // folding screens (pushable) and the bamboo blind (fixed)
+    const screen = (c, o, blind) => {
+      const k = o === '/' ? 1 : -1;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = C.ink;
+      ctx.lineWidth = u * 0.16;
+      ctx.beginPath(); ctx.moveTo(c.x - u * 0.34, c.y + k * u * 0.34); ctx.lineTo(c.x + u * 0.34, c.y - k * u * 0.34); ctx.stroke();
+      ctx.strokeStyle = blind ? '#A9B77E' : '#E8C766';
+      ctx.lineWidth = u * 0.1;
+      // a bamboo blind is slatted: light slips through between the slats
+      if (blind) ctx.setLineDash([u * 0.05, u * 0.04]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (blind) {
+        ctx.strokeStyle = 'rgba(58,43,34,.6)';
+        ctx.lineWidth = 1;
+        for (let i = -2; i <= 2; i++) {
+          const mx = c.x + i * u * 0.12, my = c.y - k * i * u * 0.12;
+          ctx.beginPath(); ctx.moveTo(mx - u * 0.05, my - u * 0.05 * k * -1); ctx.lineTo(mx + u * 0.05, my + u * 0.05 * k * -1); ctx.stroke();
+        }
+      }
+    };
+    for (const bl of b.blinds) screen(this.cellC(bl.x, bl.y), bl.o, true);
+    const push = this.anim && P < 1 && this.last && this.last.push;
+    for (const m of s.mirrors) {
+      let c = this.cellC(m.x, m.y);
+      if (push && push.to.x === m.x && push.to.y === m.y) {
+        const a = this.cellC(push.from.x, push.from.y);
+        c = { x: a.x + (c.x - a.x) * ease(P), y: a.y + (c.y - a.y) * ease(P) };
+      }
+      Art.shadow(ctx, c.x, c.y + u * 0.3, u * 0.3, u * 0.07);
+      screen(c, m.o, false);
+    }
+    this.drawCat(ctx, t);
   }
 }
 
 // ======================================================================
-// 5. 注文あてっこ — who ordered what?
+// 3. ふすま渡り — slide the doors to reach the guest room
 // ======================================================================
-class DeduceGame {
+class FusumaGame extends GridGame {
+  constructor(level, api) {
+    const b = Logic.Fusuma.parse(level);
+    super(level, api, Logic.Fusuma, b);
+  }
+  draw(ctx, t) {
+    const { b, u } = this;
+    const s = this.s, P = this.p();
+    for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) {
+      const X = this.ox + x * u, Y = this.oy + y * u;
+      const c = b.map[y][x];
+      if (c === '#') { paperTile(ctx, X, Y, u + 0.5, u + 0.5, '#6B4A33'); continue; }
+      paperTile(ctx, X, Y, u + 0.5, u + 0.5, (x + y) % 2 ? '#D9D3A6' : '#D2CB9C');
+      ctx.strokeStyle = 'rgba(90,110,60,.25)';
+      ctx.lineWidth = 1;
+      for (let k = 1; k < 5; k++) { ctx.beginPath(); ctx.moveTo(X + 2, Y + (k * u) / 5); ctx.lineTo(X + u - 2, Y + (k * u) / 5); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(58,43,34,.35)';
+      ctx.strokeRect(X + 0.5, Y + 0.5, u - 1, u - 1);
+    }
+    // the guest room: a cushion and the guest waiting
+    const g = this.cellC(b.goal.x, b.goal.y);
+    Art.rr(ctx, g.x - u * 0.4, g.y - u * 0.4, u * 0.8, u * 0.8, u * 0.12);
+    Art.inked(ctx, '#B84A3A', Math.max(1.2, u * 0.035));
+    if (!(s.x === b.goal.x && s.y === b.goal.y)) Art.guest(ctx, g.x, g.y - u * 0.1, u * 0.22, 1, { t, happy: this.won() });
+    // the landlady's key
+    if (b.key && !s.key) {
+      const k = this.cellC(b.key.x, b.key.y);
+      const bob = Math.sin(t * 3) * u * 0.03;
+      Art.ellipse(ctx, k.x - u * 0.1, k.y + bob, u * 0.12, u * 0.12, '#E8C766', Math.max(1.2, u * 0.03));
+      ctx.strokeStyle = C.ink; ctx.lineWidth = u * 0.07;
+      ctx.beginPath(); ctx.moveTo(k.x, k.y + bob); ctx.lineTo(k.x + u * 0.28, k.y + bob); ctx.moveTo(k.x + u * 0.2, k.y + bob); ctx.lineTo(k.x + u * 0.2, k.y + u * 0.1 + bob); ctx.stroke();
+      ctx.strokeStyle = '#E8C766'; ctx.lineWidth = u * 0.04; ctx.stroke();
+    }
+    // the doors
+    const bump = this.bumped(0.35);
+    const moving = this.anim && P < 1 && this.last && this.last.push ? this.last.push.moving : [];
+    b.panels.forEach((p, i) => {
+      let pos = s.pos[i];
+      if (moving.includes(i)) {
+        const a = this.prev.pos[i];
+        pos = { x: a.x + (pos.x - a.x) * ease(P), y: a.y + (pos.y - a.y) * ease(P) };
+      }
+      let X = this.ox + pos.x * u, Y = this.oy + pos.y * u;
+      const w = p.axis === 'h' ? p.len * u : u, h = p.axis === 'h' ? u : p.len * u;
+      if (bump && bump.info && bump.info.panel === i) {
+        const k = Math.sin((now() - bump.t) * 60) * 2;
+        X += k; Y += k;
+      }
+      const inset = u * 0.12;
+      const x0 = X + (p.axis === 'v' ? inset : 2), y0 = Y + (p.axis === 'h' ? inset : 2);
+      const ww = w - (p.axis === 'v' ? inset * 2 : 4), hh = h - (p.axis === 'h' ? inset * 2 : 4);
+      ctx.fillStyle = 'rgba(58,43,34,.18)';
+      ctx.fillRect(x0 + 2, y0 + 3, ww, hh);
+      Art.rr(ctx, x0, y0, ww, hh, 3);
+      Art.inked(ctx, p.link ? '#DCE6EE' : '#F6EEDB', Math.max(1.5, u * 0.05));
+      // frame and paper pattern
+      ctx.strokeStyle = '#7A5638';
+      ctx.lineWidth = Math.max(1, u * 0.04);
+      ctx.strokeRect(x0 + 3, y0 + 3, ww - 6, hh - 6);
+      if (p.link) {
+        // paired doors share an indigo wave crest
+        ctx.strokeStyle = C.noren;
+        ctx.lineWidth = Math.max(1, u * 0.035);
+        for (let k = 0; k < p.len; k++) {
+          const cx = p.axis === 'h' ? x0 + (k + 0.5) * u : x0 + ww / 2, cy = p.axis === 'h' ? y0 + hh / 2 : y0 + (k + 0.5) * u;
+          ctx.beginPath(); ctx.arc(cx, cy + u * 0.05, u * 0.12, Math.PI, 2 * Math.PI); ctx.arc(cx, cy + u * 0.05, u * 0.06, Math.PI, 2 * Math.PI); ctx.stroke();
+        }
+      }
+      // handle
+      const hx = p.axis === 'h' ? x0 + ww - u * 0.3 : x0 + ww / 2, hy = p.axis === 'h' ? y0 + hh / 2 : y0 + hh - u * 0.3;
+      Art.ellipse(ctx, hx, hy, u * 0.07, u * 0.07, '#5A4034', 1);
+      // track arrows show which way it slides
+      ctx.fillStyle = 'rgba(122,86,56,.55)';
+      const m = { x: x0 + ww / 2, y: y0 + hh / 2 };
+      for (const sgn of [-1, 1]) {
+        ctx.beginPath();
+        if (p.axis === 'h') { const ax = m.x + sgn * (ww / 2 - u * 0.12); ctx.moveTo(ax, m.y); ctx.lineTo(ax - sgn * u * 0.1, m.y - u * 0.07); ctx.lineTo(ax - sgn * u * 0.1, m.y + u * 0.07); }
+        else { const ay = m.y + sgn * (hh / 2 - u * 0.12); ctx.moveTo(m.x, ay); ctx.lineTo(m.x - u * 0.07, ay - sgn * u * 0.1); ctx.lineTo(m.x + u * 0.07, ay - sgn * u * 0.1); }
+        ctx.fill();
+      }
+      if (p.lock) {
+        const lx = m.x, ly = m.y;
+        Art.rr(ctx, lx - u * 0.12, ly - u * 0.05, u * 0.24, u * 0.2, 2);
+        Art.inked(ctx, s.key ? '#C9B98A' : C.shu, 1.2);
+        ctx.beginPath(); ctx.arc(lx + (s.key ? u * 0.06 : 0), ly - u * 0.05, u * 0.08, Math.PI, 2 * Math.PI);
+        ctx.strokeStyle = C.ink; ctx.lineWidth = 1.6; ctx.stroke();
+      }
+    });
+    this.drawCat(ctx, t, { carry: this.won() ? [] : ['tempura'] });
+  }
+}
+
+// ======================================================================
+// 4. だし回し — turn the bamboo pipes, mix the stocks
+// ======================================================================
+const STOCK = { k: '#E39A3F', n: '#5E9A4C', kn: '#D8B03A' };
+class DashiGame {
   constructor(level, api) {
     this.api = api;
     this.level = level;
-    this.n = level.dishes.length;
-    this.seat = Array(this.n).fill(null); // dish index per seat
-    this.sel = null; // dish index held
-    this.tries = 0;
-    this.result = null;
+    this.r = level.rot.map((row) => [...row].map(Number));
+    this.fixed = new Set(level.fixed || []);
+    this.turns = 0;
     this.hist = [];
+    this.spin = {};
+    this.h = level.tiles.length;
+    this.w = level.tiles[0].length;
   }
   layout(w) {
-    this.w = w;
-    this.sw = Math.floor(Math.min((w - 20) / this.n, 90));
-    this.ox = Math.floor((w - this.sw * this.n) / 2);
-    this.guestY = 70;
-    this.slotY = 150;
-    this.passY = 222;
-    this.clueY = 282;
-    this.rowH = 38;
-    this.btn = { x: w / 2 - 70, y: 0, w: 140, h: 40 };
-    const relational = this.level.clues.filter((c) => !['is', 'not'].includes(c.t));
-    this.btn.y = this.clueY + relational.length * this.rowH + 18;
-    return this.btn.y + this.btn.h + 16;
+    this.u = Math.floor(Math.min((w - 8) / this.w, 66));
+    this.ox = Math.floor((w - this.u * this.w) / 2);
+    this.oy = 8;
+    return this.u * this.h + 18;
   }
-  status() { return { moves: this.tries, par: 1, label: `${this.tries}回目` }; }
-  canUndo() { return false; }
-  undo() {}
-  placedAt(d) { return this.seat.indexOf(d); }
+  status() { return { moves: this.turns, par: 0, label: `${this.turns}回まわした` }; }
+  canUndo() { return this.hist.length > 0; }
+  undo() { if (this.hist.length) { this.r = this.hist.pop(); this.turns--; } }
   down(x, y) {
-    const { sw, ox } = this;
-    // dishes waiting on the pass
-    if (y > this.passY - 26 && y < this.passY + 26) {
-      const d = Math.floor((x - ox) / sw);
-      if (d >= 0 && d < this.n && this.placedAt(d) < 0) this.sel = this.sel === d ? null : d;
-      return;
-    }
-    // the seats
-    if (y > this.slotY - 30 && y < this.slotY + 30) {
-      const s = Math.floor((x - ox) / sw);
-      if (s < 0 || s >= this.n) return;
-      this.result = null;
-      if (this.sel !== null) {
-        const prev = this.placedAt(this.sel);
-        if (prev >= 0) this.seat[prev] = null;
-        this.seat[s] = this.sel;
-        this.sel = null;
-      } else if (this.seat[s] !== null) {
-        this.seat[s] = null;
-      }
-      return;
-    }
-    const b = this.btn;
-    if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h && this.seat.every((d) => d !== null)) {
-      this.tries++;
-      const right = this.seat.filter((d, s) => this.level.dishes[d] === this.level.answer[s]).length;
-      this.result = { right, t: now() };
-      if (right === this.n) setTimeout(() => this.api.won(this.status()), 700);
-    }
-  }
-  drawClue(ctx, c, x, y, s) {
-    const icon = (k, xx) => { Art.food(ctx, k, xx, y, s * 0.42); };
-    // drawing a dish changes the fill, so set the chalk colour each time
-    const T = (txt, xx) => {
-      ctx.fillStyle = '#F2EEDF';
-      ctx.font = `${s * 0.42}px "Zen Maru Gothic", sans-serif`;
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(txt, xx, y + 1);
-      return xx + ctx.measureText(txt).width;
-    };
-    let cx = x;
-    if (c.t === 'adj') { icon(c.a, cx + s * 0.5); icon(c.b, cx + s * 1.5); T('は となりどうし', cx + s * 2.1); }
-    if (c.t === 'left') { icon(c.a, cx + s * 0.5); cx = T('は', cx + s * 1.05); icon(c.b, cx + s * 0.6); T('より 左の席', cx + s * 1.15); }
-    if (c.t === 'end') { icon(c.a, cx + s * 0.5); T('は はしっこの席', cx + s * 1.05); }
-    if (c.t === 'mid') { icon(c.a, cx + s * 0.5); T('は はしっこじゃない', cx + s * 1.05); }
+    const cx = Math.floor((x - this.ox) / this.u), cy = Math.floor((y - this.oy) / this.u);
+    if (cx < 0 || cy < 0 || cx >= this.w || cy >= this.h) return;
+    const tile = this.level.tiles[cy][cx];
+    if (!'ILTX'.includes(tile)) return;
+    if (this.fixed.has(`${cx},${cy}`)) { this.spin[`${cx},${cy}`] = { t: now(), locked: true }; return; }
+    if (Logic.Dashi.won(this.level, this.r)) return;
+    this.hist.push(this.r.map((row) => [...row]));
+    this.r[cy][cx] = (this.r[cy][cx] + 1) % 4;
+    this.turns++;
+    this.spin[`${cx},${cy}`] = { t: now() };
+    if (Logic.Dashi.won(this.level, this.r)) setTimeout(() => this.api.won(this.status()), 600);
   }
   draw(ctx, t) {
-    const { sw, ox, n } = this;
-    const L = this.level;
-    // counter
-    Art.rr(ctx, ox - 8, this.slotY - 26, sw * n + 16, 52, 6);
-    Art.inked(ctx, C.wood, 1.6);
-    const happyAll = this.result && this.result.right === n;
-    for (let s = 0; s < n; s++) {
-      const X = ox + s * sw + sw / 2;
-      Art.guest(ctx, X, this.guestY, Math.min(22, sw * 0.26), s, { t, happy: happyAll });
-      // what this guest says about themselves
-      const own = L.clues.filter((c) => (c.t === 'not' || c.t === 'is') && c.seat === s);
-      own.forEach((c, k) => {
-        const bx = X + sw * 0.18, by = this.guestY - 44 - k * 30;
-        Art.rr(ctx, bx - 16, by - 13, 32, 26, 8);
-        Art.inked(ctx, '#FFFBF2', 1.4);
-        Art.food(ctx, c.a, bx, by, 9);
-        if (c.t === 'not') {
-          ctx.strokeStyle = C.shu; ctx.lineWidth = 2.4;
-          ctx.beginPath(); ctx.moveTo(bx - 10, by - 9); ctx.lineTo(bx + 10, by + 9); ctx.moveTo(bx + 10, by - 9); ctx.lineTo(bx - 10, by + 9); ctx.stroke();
+    const { u, level } = this;
+    const flow = Logic.Dashi.flow(level, this.r);
+    Art.rr(ctx, this.ox - 6, this.oy - 6, this.u * this.w + 12, this.u * this.h + 12, 8);
+    Art.inked(ctx, '#B98A5E', 2);
+    const pipe = (cx, cy, m, chanOf, fixed, rotA) => {
+      const c = { x: this.ox + (cx + 0.5) * u, y: this.oy + (cy + 0.5) * u };
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(rotA);
+      const arms = [[1, 0, -1], [2, 1, 0], [4, 0, 1], [8, -1, 0]].filter(([bit]) => m & bit);
+      // bamboo (or iron) tube, then what flows in it
+      for (const pass of [0, 1, 2]) {
+        for (const [bit, dx, dy] of arms) {
+          const ch = chanOf(bit);
+          const carry = flow.carry(cx, cy, ch);
+          if (pass === 2 && !carry) continue;
+          ctx.strokeStyle = pass === 0 ? C.ink : pass === 1 ? (fixed ? '#7D7B78' : '#C9B07A') : STOCK[carry] || '#fff';
+          ctx.lineWidth = pass === 0 ? u * 0.34 : pass === 1 ? u * 0.26 : u * 0.12;
+          ctx.lineCap = 'butt';
+          ctx.beginPath();
+          // on a crossing the E-W tube bridges over the N-S one
+          ctx.moveTo(0, 0);
+          ctx.lineTo(dx * u * 0.5, dy * u * 0.5);
+          ctx.stroke();
         }
-      });
-      // the place setting in front of them
-      Art.ellipse(ctx, X, this.slotY + 4, sw * 0.34, 12, 'rgba(255,251,242,.5)', 1);
-      if (this.seat[s] !== null) Art.plate(ctx, X, this.slotY, Math.min(sw * 0.8, 60), L.dishes[this.seat[s]]);
-    }
-    // the pass: dishes still to hand out
-    ctx.fillStyle = 'rgba(126,85,53,.18)';
-    ctx.fillRect(ox - 8, this.passY - 22, sw * n + 16, 44);
-    for (let d = 0; d < n; d++) {
-      if (this.placedAt(d) >= 0) continue;
-      const X = ox + d * sw + sw / 2;
-      const lift = this.sel === d ? -8 + Math.sin(t * 6) * 2 : 0;
-      if (this.sel === d) Art.ellipse(ctx, X, this.passY + 4, sw * 0.34, 12, 'rgba(255,197,107,.6)');
-      Art.plate(ctx, X, this.passY + lift, Math.min(sw * 0.8, 60), L.dishes[d]);
-    }
-    // the cat behind the pass
-    Art.cat(ctx, ox - 2, this.passY - 16, 12, { facing: 'right', t, noShadow: true, happy: happyAll });
-    // chalkboard with what the regulars said about each other
-    const rel = L.clues.filter((c) => !['is', 'not'].includes(c.t));
-    Art.rr(ctx, 10, this.clueY - 24, this.w - 20, rel.length * this.rowH + 12, 6);
-    Art.inked(ctx, '#2F3A31', 3);
-    rel.forEach((c, i) => this.drawClue(ctx, c, 24, this.clueY - 4 + i * this.rowH, 30));
-    // serve button and the result as smiling faces
-    const b = this.btn;
-    const ready = this.seat.every((d) => d !== null);
-    Art.rr(ctx, b.x, b.y, b.w, b.h, 8);
-    Art.inked(ctx, ready ? C.shu : '#CDB9A4', 1.8);
-    ctx.fillStyle = '#FFF7EA';
-    ctx.font = `18px "Yusei Magic", sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('お届け', b.x + b.w / 2, b.y + b.h / 2 + 1);
-    if (this.result && !happyAll) {
-      for (let k = 0; k < n; k++) {
-        const fx = b.x + b.w + 18 + k * 18, fy = b.y + b.h / 2;
-        Art.ellipse(ctx, fx, fy, 7, 7, k < this.result.right ? '#F4CF4A' : '#DDD3C4', 1.2);
+        if (pass < 2 && arms.length > 1 && !(m === 15)) {
+          Art.ellipse(ctx, 0, 0, pass === 0 ? u * 0.17 : u * 0.13, pass === 0 ? u * 0.17 : u * 0.13, pass === 0 ? C.ink : fixed ? '#7D7B78' : '#C9B07A');
+        }
+      }
+      if (m === 15) {
+        // redraw the bridge on top
+        for (const pass of [0, 1, 2]) {
+          const carry = flow.carry(cx, cy, 1);
+          if (pass === 2 && !carry) continue;
+          ctx.strokeStyle = pass === 0 ? C.ink : pass === 1 ? (fixed ? '#8E8C88' : '#D8C08A') : STOCK[carry];
+          ctx.lineWidth = pass === 0 ? u * 0.36 : pass === 1 ? u * 0.28 : u * 0.12;
+          ctx.beginPath(); ctx.moveTo(-u * 0.5, 0); ctx.lineTo(u * 0.5, 0); ctx.stroke();
+        }
+      }
+      if (fixed) for (const [dx, dy] of [[-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]]) Art.ellipse(ctx, dx * u, dy * u, u * 0.04, u * 0.04, '#5E5C58');
+      // spill: drops at an open end
+      for (const [bit, dx, dy] of arms) {
+        if (!flow.spilling(cx, cy, chanOf(bit))) continue;
+        const [nx, ny] = [cx + (bit === 2 ? 1 : bit === 8 ? -1 : 0), cy + (bit === 4 ? 1 : bit === 1 ? -1 : 0)];
+        const nm = nx >= 0 && ny >= 0 && nx < this.w && ny < this.h ? Logic.Dashi.mask(level, this.r, nx, ny) : 0;
+        const back = { 1: 4, 2: 8, 4: 1, 8: 2 }[bit];
+        if (nm & back) continue;
+        const k = (t * 2) % 1;
+        Art.ellipse(ctx, dx * u * (0.5 + k * 0.1), dy * u * (0.5 + k * 0.1) + k * u * 0.1, u * 0.05, u * 0.07, STOCK[flow.carry(cx, cy, chanOf(bit))] || C.cold);
+      }
+      ctx.restore();
+    };
+    for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) {
+      const X = this.ox + x * u, Y = this.oy + y * u;
+      paperTile(ctx, X, Y, u + 0.5, u + 0.5, (x + y) % 2 ? '#E9D6B2' : '#E2CDA6');
+      ctx.strokeStyle = 'rgba(58,43,34,.15)';
+      ctx.strokeRect(X + 0.5, Y + 0.5, u - 1, u - 1);
+      const tile = level.tiles[y][x];
+      if ('ILTX'.includes(tile)) {
+        const sp = this.spin[`${x},${y}`];
+        const fixed = this.fixed.has(`${x},${y}`);
+        let rotA = 0, m = Logic.Dashi.mask(level, this.r, x, y);
+        if (sp && !sp.locked && now() - sp.t < 0.18) {
+          // turn in from the previous quarter
+          rotA = -(1 - ease((now() - sp.t) / 0.18)) * Math.PI / 2;
+        }
+        let dx2 = 0;
+        if (sp && sp.locked && now() - sp.t < 0.3) dx2 = Math.sin((now() - sp.t) * 60) * 2;
+        ctx.save(); ctx.translate(dx2, 0);
+        pipe(x, y, m, (bit) => Logic.Dashi.chan(level, x, y, bit), fixed, rotA);
+        ctx.restore();
       }
     }
+    // stock pots and bowls
+    for (const src of level.sources) {
+      const m = { up: 1, right: 2, down: 4, left: 8 }[src.dir];
+      pipe(src.x, src.y, m, () => 0, true, 0);
+      const c = { x: this.ox + (src.x + 0.5) * u, y: this.oy + (src.y + 0.5) * u };
+      Art.ellipse(ctx, c.x, c.y, u * 0.34, u * 0.3, '#3F3530', Math.max(1.2, u * 0.035));
+      Art.ellipse(ctx, c.x, c.y - u * 0.04, u * 0.26, u * 0.16, STOCK[src.f], 1);
+      ctx.fillStyle = '#FFF7EA';
+      ctx.font = `${u * 0.28}px "Yusei Magic", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(src.f === 'k' ? '鰹' : '昆', c.x, c.y + u * 0.02);
+    }
+    level.bowls.forEach((bw, i) => {
+      const m = { up: 1, right: 2, down: 4, left: 8 }[bw.dir];
+      pipe(bw.x, bw.y, m, () => 0, true, 0);
+      const c = { x: this.ox + (bw.x + 0.5) * u, y: this.oy + (bw.y + 0.5) * u };
+      const got = flow.bowls[i];
+      const want = [...bw.want].sort().join('');
+      ctx.beginPath();
+      ctx.moveTo(c.x - u * 0.36, c.y - u * 0.08);
+      ctx.quadraticCurveTo(c.x - u * 0.32, c.y + u * 0.34, c.x, c.y + u * 0.34);
+      ctx.quadraticCurveTo(c.x + u * 0.32, c.y + u * 0.34, c.x + u * 0.36, c.y - u * 0.08);
+      ctx.closePath();
+      Art.inked(ctx, '#FFFBF2', Math.max(1.2, u * 0.035));
+      Art.ellipse(ctx, c.x, c.y - u * 0.08, u * 0.36, u * 0.12, got ? STOCK[got] || '#ccc' : '#F4EAD6', Math.max(1, u * 0.03));
+      // the order: a ring in the colour this bowl wants
+      ctx.lineWidth = u * 0.06;
+      ctx.strokeStyle = STOCK[want];
+      ctx.beginPath(); ctx.arc(c.x, c.y + u * 0.12, u * 0.12, 0, Math.PI * 2); ctx.stroke();
+      if (got === want) Art.hanko(ctx, c.x + u * 0.26, c.y - u * 0.28, u * 0.14, '済');
+    });
   }
 }
 
 const GAMES = [
   {
-    id: 'slide', cls: SlideGame, title: 'すべって出前', en: 'Slippery Street',
-    pitch: '雨あがりの商店街。一度すべり出したら、何かにぶつかるまで止まらない。',
-    rule: 'スワイプかタップでその向きへすべる。お客さんにぶつかると料理を渡す。ござの上では止まれる。',
-  },
-  {
-    id: 'pack', cls: PackGame, title: 'おかもち詰め', en: 'Okamochi Packing',
+    id: 'pack', cls: PackGame, title: 'おかもち詰め', en: 'Okamochi Packing', kept: true,
     pitch: '出前箱にぴったり詰める。熱いものと冷たいものは、となりに置けない。',
     rule: 'ドラッグで箱へ、タップで回す。赤い湯気と青い霜はとなり合わせ禁止。汁物（▼）はいちばん下の段へ。',
+    gimmicks: [['熱い／冷たい', 1], ['汁物は下段', 1], ['割れもの（上に載せられない）', 0], ['二段重ね（ふたを閉めて次の段）', 0], ['配達順（先に届ける品は手前）', 0], ['大盛り（途中で形が変わる）', 0]],
+    notes: {},
   },
   {
-    id: 'stroke', cls: StrokeGame, title: 'ひとふで出前', en: 'One-Stroke Round',
-    pitch: 'お店を出て、すべての路地を一度ずつ通り、番号の家に順番どおり寄る。',
-    rule: '指でなぞって進む。通ったマスには戻れない（なぞり直すと巻き戻る）。',
+    id: 'oden', cls: OdenGame, title: 'おでん仕込み', en: 'Oden Prep',
+    pitch: '具を押して鍋へ。鍋は札に書かれた順番でしか受けつけない。',
+    rule: 'スワイプかタップで歩き、具を押す。鍋の札の順番どおりに入れる（光っている具が次）。',
+    gimmicks: [['入れる順番', 1], ['鍋がふたつ', 1], ['つるつる床（押した具がすべる）', 1], ['重い具（2マス分）', 0], ['だし汁の流れ（具が流される）', 0], ['火加減の鍋（入れる数で火が変わる）', 0]],
+    notes: { 1: '新しいしかけ：鍋がふたつ。それぞれの札の順番で。', 2: '新しいしかけ：つるつる床。押した具が止まるまですべる。' },
   },
   {
-    id: 'sort', cls: SortGame, title: '皿そろえ屋台', en: 'Stall Sort',
-    pitch: '縁日の屋台で、ごちゃまぜの皿を種類ごとにそろえる。',
-    rule: 'タップで一番上の皿を持ち上げ、別の台へ。置けるのは空の台か、同じ料理の上だけ。',
+    id: 'light', cls: LightGame, title: 'あかり届け', en: 'Lantern Light',
+    pitch: '縁日の夜。びょうぶを押して、行灯の光を提灯まで届ける。',
+    rule: 'スワイプかタップで歩き、金のびょうぶを押す。光はびょうぶで直角に曲がる。提灯すべてに灯りを。',
+    gimmicks: [['びょうぶで反射', 1], ['提灯がふたつ', 1], ['赤い和紙（赤い光に）', 1], ['すだれ（半分通して半分曲げる）', 1], ['回転台のびょうぶ', 0], ['時間で動く人影', 0]],
+    notes: { 1: '新しいしかけ：提灯がふたつ。', 2: '新しいしかけ：赤い和紙。通った光は赤くなる。赤い提灯は赤い光でしか灯らない。', 3: '新しいしかけ：すだれ。光を半分通して、半分曲げる（押せない）。' },
   },
   {
-    id: 'deduce', cls: DeduceGame, title: '注文あてっこ', en: 'Who Ordered What?',
-    pitch: '常連さんの話を聞いて、だれが何を頼んだか当てる推理パズル。',
-    rule: '料理をタップして席へ。吹き出しは本人の話、黒板はみんなの話。当たった人数が顔で出る。',
+    id: 'fusuma', cls: FusumaGame, title: 'ふすま渡り', en: 'Sliding Doors',
+    pitch: '古い宿で、ふすまを敷居にそって押し、お客さんの部屋まで天ぷらを届ける。',
+    rule: 'スワイプかタップで歩く。ふすまは矢印の向きにだけ押せる。座布団の部屋まで行けば配達完了。',
+    gimmicks: [['敷居にそって押す', 1], ['連動ふすま（同じ柄は一緒に動く）', 1], ['女将さんの鍵', 1], ['回り障子（押すと90度回る）', 0], ['寝ているお客さん（静かに通る）', 0], ['階段で上の階へ', 0]],
+    notes: { 1: '新しいしかけ：同じ柄のふすまは一緒に動く。', 2: '新しいしかけ：鍵のかかったふすま。先に女将さんの鍵を拾う。' },
+  },
+  {
+    id: 'dashi', cls: DashiGame, title: 'だし回し', en: 'Stock Pipes',
+    pitch: '竹の樋を回して、だしをお椀まで。鰹と昆布が出会うと合わせだしになる。',
+    rule: '樋をタップで回す。お椀の輪の色のだしを届け、だしを樋からこぼさない。鉄の樋は回らない。',
+    gimmicks: [['樋を回す', 1], ['合わせだし（混ざる）', 1], ['回らない鉄の樋', 1], ['交差（混ざらずにすれ違う）', 1], ['栓（開け閉め）', 0], ['温度（遠いとぬるくなる）', 0]],
+    notes: { 1: '新しいしかけ：鰹（橙）と昆布（緑）が出会うと合わせだし（金）。', 2: '新しいしかけ：鉄の樋は回らない。2つのだしを混ぜずに届ける。', 3: '新しいしかけ：交差する樋。縦と横は混ざらずにすれ違う。' },
   },
 ];
 
@@ -1668,20 +1883,24 @@ const GAMES = [
   function buildMenu() {
     const list = $('#cards');
     list.innerHTML = '';
+    let fresh = 0;
     GAMES.forEach((g, i) => {
       const done = cleared(g.id).length;
+      const label = g.kept ? '残した案' : `新案${++fresh}`;
+      const chips = g.gimmicks.map(([name, on]) => `<li class="${on ? 'on' : ''}">${name}</li>`).join('');
       const card = document.createElement('button');
       card.className = 'card';
       card.id = 'card-' + g.id;
       card.innerHTML = `
         <canvas class="thumb" width="1" height="1" aria-hidden="true"></canvas>
         <span class="card-text">
-          <span class="card-no">案${i + 1}</span>
+          <span class="card-no ${g.kept ? 'kept' : ''}">${label}</span>
           <span class="card-title">${g.title}</span>
           <span class="card-en">${g.en}</span>
           <span class="card-pitch">${g.pitch}</span>
           <span class="card-progress">${LEVELS[g.id].map((_, k) => `<i class="${cleared(g.id).includes(k) ? 'on' : ''}"></i>`).join('')}<b>${done}/${LEVELS[g.id].length}</b></span>
-        </span>`;
+        </span>
+        <ul class="chips" aria-label="しかけ">${chips}</ul>`;
       card.addEventListener('click', () => open(i, firstOpen(g.id)));
       list.appendChild(card);
       drawThumb(card.querySelector('canvas'), g);
@@ -1726,6 +1945,9 @@ const GAMES = [
     game = new meta.cls(lv, { won });
     $('#receipt').hidden = true;
     $('#g-level').textContent = `${levelIndex + 1} / ${LEVELS[meta.id].length}`;
+    const note = meta.notes[levelIndex];
+    $('#g-note').textContent = note || '';
+    $('#g-note').hidden = !note;
     $('#dots').innerHTML = LEVELS[meta.id].map((_, k) => `<button class="dot ${k === levelIndex ? 'cur' : ''} ${cleared(meta.id).includes(k) ? 'on' : ''}" data-k="${k}" aria-label="${k + 1}問目">${k + 1}</button>`).join('');
     $('#dots').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { levelIndex = +b.dataset.k; start(); }));
     resize();
@@ -1761,9 +1983,9 @@ const GAMES = [
     const c = cleared(meta.id);
     if (!c.includes(levelIndex)) store.set('cleared:' + meta.id, [...c, levelIndex]);
     const stars = st.label ? 3 : st.moves <= st.par ? 3 : st.moves <= st.par * 1.5 ? 2 : 1;
-    $('#r-body').textContent = meta.id === 'deduce'
-      ? `${st.moves}回目で全員に届けました`
-      : meta.id === 'stroke' || meta.id === 'pack' ? 'ぴったり届けました' : `${st.moves}手で配達（目標 ${st.par}手）`;
+    $('#r-body').textContent = meta.id === 'pack' ? 'ぴったり詰めました'
+      : meta.id === 'dashi' ? `${st.moves}回まわして、だしが届きました`
+        : `${st.moves}手で配達（目標 ${st.par}手）`;
     $('#r-stars').innerHTML = [0, 1, 2].map((k) => `<i class="${k < stars ? 'on' : ''}">済</i>`).join('');
     const last = levelIndex >= LEVELS[meta.id].length - 1;
     $('#r-next').textContent = last ? 'ほかの案へ' : '次の出前へ';
