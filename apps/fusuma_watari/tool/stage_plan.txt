@@ -1,0 +1,41 @@
+# slot  options for tool/gen_levels.dart (one stage each)
+01 --w=5 --h=4 --walls=1 --doors=2 --guests=1 --target=7 --min=4 --push=1
+02 --w=5 --h=4 --walls=2 --doors=3 --guests=1 --target=9 --min=6 --push=2
+03 --w=6 --h=4 --walls=2 --doors=3 --guests=1 --target=11 --min=8 --push=2
+04 --w=6 --h=5 --walls=3 --doors=4 --guests=1 --target=13 --min=9 --push=3
+05 --w=6 --h=5 --walls=3 --doors=5 --guests=2 --target=15 --min=10 --push=3
+06 --w=7 --h=5 --walls=3 --doors=5 --guests=1 --target=16 --min=11 --push=4
+07 --w=7 --h=6 --walls=4 --doors=6 --guests=2 --target=18 --min=12 --push=4
+08 --w=7 --h=6 --walls=4 --doors=6 --guests=1 --target=20 --min=13 --push=5
+09 --w=5 --h=5 --walls=2 --doors=3 --guests=1 --pair --target=9 --min=6 --push=2
+10 --w=6 --h=5 --walls=2 --doors=4 --guests=1 --pair --target=12 --min=8 --push=3
+11 --w=6 --h=5 --walls=3 --doors=4 --guests=1 --pair --target=14 --min=9 --push=3
+12 --w=6 --h=6 --walls=3 --doors=5 --guests=2 --pair --target=16 --min=10 --push=3
+13 --w=7 --h=5 --walls=3 --doors=5 --guests=1 --pair --target=17 --min=11 --push=4
+14 --w=7 --h=6 --walls=4 --doors=5 --guests=1 --pair --target=18 --min=12 --push=4
+15 --w=7 --h=6 --walls=4 --doors=6 --guests=2 --pair --target=20 --min=13 --push=4
+16 --w=7 --h=6 --walls=5 --doors=6 --guests=1 --pair --target=22 --min=14 --push=5
+17 --w=5 --h=5 --walls=2 --doors=3 --guests=1 --lock --target=10 --min=6 --push=2
+18 --w=6 --h=5 --walls=2 --doors=3 --guests=1 --lock --target=12 --min=8 --push=2
+19 --w=6 --h=5 --walls=3 --doors=4 --guests=1 --lock --target=14 --min=9 --push=3
+20 --w=6 --h=6 --walls=3 --doors=4 --guests=2 --lock --target=16 --min=10 --push=3
+21 --w=7 --h=5 --walls=3 --doors=5 --guests=1 --lock --target=17 --min=11 --push=3
+22 --w=7 --h=6 --walls=4 --doors=5 --guests=1 --lock --target=19 --min=12 --push=4
+23 --w=7 --h=6 --walls=4 --doors=5 --guests=2 --lock --target=20 --min=13 --push=4
+24 --w=7 --h=6 --walls=4 --doors=6 --guests=1 --lock --target=22 --min=14 --push=5
+25 --w=5 --h=5 --walls=2 --doors=1 --guests=1 --revolve=1 --target=8 --min=5 --push=1
+26 --w=5 --h=5 --walls=2 --doors=2 --guests=1 --revolve=1 --target=10 --min=6 --push=2
+27 --w=6 --h=5 --walls=2 --doors=3 --guests=1 --revolve=1 --target=12 --min=8 --push=3
+28 --w=6 --h=5 --walls=2 --doors=2 --guests=1 --revolve=2 --target=14 --min=9 --push=3
+29 --w=6 --h=6 --walls=3 --doors=4 --guests=2 --revolve=1 --target=16 --min=10 --push=3
+30 --w=7 --h=5 --walls=3 --doors=3 --guests=1 --revolve=2 --target=17 --min=11 --push=4
+31 --w=7 --h=6 --walls=3 --doors=4 --guests=1 --revolve=2 --target=19 --min=12 --push=4
+32 --w=7 --h=6 --walls=4 --doors=4 --guests=2 --revolve=2 --target=21 --min=13 --push=4
+33 --w=6 --h=5 --walls=2 --doors=4 --guests=1 --pair --lock --target=14 --min=9 --push=3
+34 --w=6 --h=5 --walls=2 --doors=4 --guests=1 --pair --revolve=1 --target=15 --min=10 --push=3
+35 --w=6 --h=6 --walls=3 --doors=4 --guests=1 --lock --revolve=1 --target=16 --min=10 --push=3
+36 --w=7 --h=6 --walls=3 --doors=5 --guests=2 --pair --lock --target=18 --min=12 --push=4
+37 --w=7 --h=6 --walls=3 --doors=5 --guests=2 --pair --revolve=1 --target=19 --min=12 --push=4
+38 --w=7 --h=6 --walls=4 --doors=4 --guests=1 --lock --revolve=2 --target=20 --min=13 --push=4
+39 --w=7 --h=6 --walls=4 --doors=5 --guests=1 --pair --lock --revolve=1 --target=22 --min=14 --push=5
+40 --w=7 --h=6 --walls=4 --doors=6 --guests=2 --pair --lock --revolve=1 --target=24 --min=15 --push=5
