@@ -49,6 +49,7 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
   double _trStart = -10;
   int _bumpSerial = -1;
   double _bumpStart = -10;
+  double? _wonAt;
 
   @override
   void initState() {
@@ -88,6 +89,11 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
     if (c.bump != null && c.bump!.serial != _bumpSerial) {
       _bumpSerial = c.bump!.serial;
       _bumpStart = _now;
+    }
+    if (c.isWon) {
+      _wonAt ??= _now;
+    } else {
+      _wonAt = null;
     }
     _clock.value = _now + 1e-9; // force a repaint even when motion is off
   }
@@ -153,6 +159,7 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
       hint: c.hint,
       cursor: widget.showCursor ? c.cursor : null,
       time: motion ? _now : 0,
+      wonAge: motion && _wonAt != null ? _now - _wonAt! : 99,
     );
   }
 }

@@ -189,7 +189,7 @@ class _TitleScreenState extends State<TitleScreen> with SingleTickerProviderStat
                   child: IgnorePointer(
                     child: Transform.translate(
                       offset: Offset(0, math.sin(t * 3) * 1.5),
-                      child: CourierPortrait(size: 84 * k, stack: const ['c', 'b', 'a'], look: Dir.right),
+                      child: CourierPortrait(size: 84 * k, stack: const ['kn'], look: Dir.right),
                     ),
                   ),
                 ),

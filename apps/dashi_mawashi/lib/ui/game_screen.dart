@@ -14,6 +14,7 @@ import '../game/engine.dart';
 import '../game/levels.dart';
 import 'art.dart';
 import 'backdrop.dart';
+import 'board_painter.dart' show winWaveDuration;
 import 'board_view.dart';
 import 'ink_icons.dart';
 import 'paper.dart';
@@ -40,6 +41,10 @@ class _GameScreenState extends State<GameScreen> {
   late GameController _c;
   final _focus = FocusNode(debugLabel: 'game');
   bool _resultShown = false;
+
+  /// The receipt waits a moment so the player can watch the stock reach
+  /// every bowl.
+  bool _receipt = false;
   bool _newBest = false;
   int _stars = 0;
 
@@ -75,8 +80,12 @@ class _GameScreenState extends State<GameScreen> {
         scope.sound.play(Sfx.clear);
         if (scope.settings.haptics) HapticFeedback.mediumImpact();
       });
+      Future.delayed(scope.settings.reduceMotion(context) ? const Duration(milliseconds: 300) : winWaveDuration(_c.state) + const Duration(milliseconds: 650), () {
+        if (mounted && _c.isWon) setState(() => _receipt = true);
+      });
     } else if (!_c.isWon) {
       _resultShown = false;
+      _receipt = false;
     }
     setState(() {});
   }
@@ -165,7 +174,7 @@ class _GameScreenState extends State<GameScreen> {
     await showNotice<void>(
       context,
       title: s.allClearTitle,
-      art: const CourierPortrait(size: 70, stack: ['a', 'b', 'c']),
+      art: const CourierPortrait(size: 70, stack: ['k', 'n', 'kn']),
       body: Text(s.allClearBody),
       actions: [Builder(builder: (context) => WoodButton(kind: WoodKind.shu, label: s.toStages, onPressed: () => Navigator.pop(context)))],
     );
@@ -180,6 +189,10 @@ class _GameScreenState extends State<GameScreen> {
     if (k == LogicalKeyboardKey.arrowDown || k == LogicalKeyboardKey.keyS) d = Dir.down;
     if (k == LogicalKeyboardKey.arrowLeft || k == LogicalKeyboardKey.keyA) d = Dir.left;
     if (k == LogicalKeyboardKey.arrowRight || k == LogicalKeyboardKey.keyD) d = Dir.right;
+    if (k == LogicalKeyboardKey.escape && _keyboard) {
+      setState(() => _keyboard = false);
+      return KeyEventResult.handled;
+    }
     if (d != null) {
       setState(() => _keyboard = true);
       _c.moveCursor(d);
@@ -198,7 +211,7 @@ class _GameScreenState extends State<GameScreen> {
       _restart();
     } else if (k == LogicalKeyboardKey.keyH) {
       _hint();
-    } else if ((k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.space) && _c.isWon) {
+    } else if ((k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.space) && _c.isWon && _receipt) {
       _next();
     } else {
       return KeyEventResult.ignored;
@@ -265,13 +278,18 @@ class _GameScreenState extends State<GameScreen> {
                 scene: scene,
                 reduceMotion: reduce,
                 maxCell: _maxCell,
-                onTap: _c.isWon ? null : _tap,
+                onTap: _c.isWon
+                    ? null
+                    : (x, y) {
+                        if (_keyboard) setState(() => _keyboard = false);
+                        _tap(x, y);
+                      },
                 showCursor: _keyboard && !_c.isWon,
                 semanticLabel: s.boardSummary(st),
               ),
             ),
           ),
-          if (_c.isWon)
+          if (_c.isWon && _receipt)
             Positioned(
               left: 4,
               right: 4,

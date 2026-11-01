@@ -84,10 +84,10 @@ class _HowToPlayScreenState extends State<HowToPlayScreen> {
                               child: Column(
                                 children: [
                                   SizedBox(
-                                    height: 170,
+                                    height: (MediaQuery.sizeOf(context).height * .3).clamp(170.0, 300.0),
                                     child: i == 3
                                         ? const _ToolsIllustration()
-                                        : WoodFrame(child: AutoPlayBoard(level: _demos[i], maxCell: 40, stepMs: 620)),
+                                        : WoodFrame(child: AutoPlayBoard(level: _demos[i], maxCell: 64, stepMs: 620)),
                                   ),
                                   const SizedBox(height: 18),
                                   Row(
@@ -163,7 +163,7 @@ class _ToolsIllustration extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const CourierPortrait(size: 80, stack: ['c', 'a']),
+        const CourierPortrait(size: 80, stack: ['k', 'kn']),
         const SizedBox(width: 14),
         Column(
           mainAxisAlignment: MainAxisAlignment.center,

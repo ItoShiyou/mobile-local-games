@@ -23,9 +23,7 @@ const devices = {
   android: { w: 432, h: 768, dpr: 2.5 }, // 1080 x 1920 (9:16)
 };
 
-const ids = ['b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08',
-  't02', 't01', 't03', 't04', 't05', 't06', 't07', 't08', 'o01', 'o02', 'o03', 'o04', 'o05', 'o06', 'o07', 'o08',
-  'm01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm07', 'm08', 'm09', 'm10', 'm11', 'm12'];
+const ids = Array.from({ length: 40 }, (_, i) => 'd' + String(i + 1).padStart(2, '0'));
 
 // progress: stages cleared before `upTo`, with a mix of stamp counts
 function progressUpTo(upTo) {
@@ -35,20 +33,23 @@ function progressUpTo(upTo) {
   return { best, last: idx > 0 ? ids[idx - 1] : null };
 }
 
+// Keys follow the solver's hints from the start of each stage (arrows move
+// the cursor, Space turns a pipe); Escape hides the cursor again.
+const R = 'ArrowRight', L = 'ArrowLeft', U = 'ArrowUp', D = 'ArrowDown', T = 'Space';
 const shots = [
-  { name: '01', progress: 'b05', open: null, keys: [], wait: 4200,
-    ja: '頭の上に積んで、\n順番どおりにお届け', en: 'Stack it on your head,\nserve it in order' },
-  // a wrong serve: the dishes on top lift and the wanted one glows (held still with reduced motion)
-  { name: '02', progress: 'b05', open: 'b04', keys: ['ArrowLeft', 'ArrowLeft', 'ArrowLeft', 'ArrowDown'], wait: 900, still: true,
-    ja: '通れば拾う。\n渡せるのはいちばん上だけ', en: 'Pick up what you walk over.\nServe only the top dish' },
-  { name: '03', progress: 'm09', open: 'm09', keys: ['ArrowDown', 'ArrowUp', 'ArrowRight', 'h'], wait: 700,
-    ja: '困ったら提灯をともして\n足あとヒント', en: 'Stuck? Light the lantern\nfor a paw-print hint' },
-  { name: '04', progress: 'o05', open: 'stages', keys: [], wait: 1800,
-    ja: '5つのお店で全46品', en: '46 orders\nin five shops' },
-  { name: '05', progress: 'b01', open: 'b01', keys: ['ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight'], wait: 2200,
-    ja: '目標の手数で届けて\n判子を集めよう', en: 'Deliver within par,\ncollect the stamps' },
-  { name: '06', progress: 't05', open: 't05', keys: ['ArrowUp'], wait: 900, dark: true,
-    ja: '夜営業は提灯の灯りで', en: 'Evening service,\nby lantern light' },
+  { name: '01', progress: 'd04', open: 'd04', keys: [T, R, T, L, D, T, R, D, T, R, T, T, 'Escape'], wait: 900,
+    ja: '樋を回して、\nだしをお椀へ', en: 'Turn the pipes,\nfill the bowls' },
+  { name: '02', progress: 'd12', open: 'd12', keys: [R, R, D, D, T, R, T, T, R, T, L, L, L, L, D, D, T, R, R, R, R, T, T, T, 'Escape'], wait: 900,
+    ja: '鰹と昆布が出会えば\n合わせだし', en: 'Katsuo meets kombu:\nawase' },
+  { name: '03', progress: 'd20', open: 'd20', keys: [T, R, R, R, T, T, D, T, T, T, 'Escape', 'h'], wait: 900,
+    ja: '困ったら提灯で、\n次の樋が光る', en: 'Stuck? The lantern\nlights the next pipe' },
+  { name: '04', progress: 'd27', open: 'stages', keys: [], wait: 1800,
+    ja: '5つの場所で全40品', en: '40 dishes\nin five places' },
+  { name: '05', progress: 'd06', open: 'd06',
+    keys: [R, R, R, T, L, L, L, L, D, T, T, T, R, T, R, R, T, L, L, D, D, T, R, R, T, T, L, L, L, D, T, R, R, R, T, L, D, T, T, R, T], wait: 3200,
+    ja: '目標の回数で仕上げて\n判子を集めよう', en: 'Finish within par,\ncollect the stamps' },
+  { name: '06', progress: 'd36', open: 'd36', keys: [T, D, T, R, D, T, T, R, R, T, L, L, D, T, T, R, T, T, 'Escape'], wait: 900, dark: true,
+    ja: '夜なべは\n提灯の灯りで', en: 'Late-night stock,\nby lantern light' },
 ];
 
 async function capture(browser, dev, lang, shot) {
@@ -65,7 +66,7 @@ async function capture(browser, dev, lang, shot) {
     localStorage.clear();
     localStorage.setItem('flutter.progress.best.v1', JSON.stringify(JSON.stringify(best)));
     if (last) localStorage.setItem('flutter.progress.last.v1', JSON.stringify(last));
-    localStorage.setItem('flutter.progress.intro.v1', JSON.stringify(['howto', 'counter', 'tray', 'oneWay']));
+    localStorage.setItem('flutter.progress.intro.v1', JSON.stringify(['howto', 'mix', 'iron', 'cross', 'shiitake']));
     localStorage.setItem('flutter.settings.language', JSON.stringify(lang));
     localStorage.setItem('flutter.settings.music', 'false');
     localStorage.setItem('flutter.settings.sound', 'false');
@@ -74,7 +75,7 @@ async function capture(browser, dev, lang, shot) {
   await page.waitForTimeout(shot.open ? 5200 : 4200);
   for (const k of shot.keys) {
     await page.keyboard.press(k);
-    await page.waitForTimeout(450);
+    await page.waitForTimeout(280);
   }
   await page.waitForTimeout(shot.wait);
   const png = await page.screenshot();
@@ -117,8 +118,8 @@ async function compose(browser, dev, png, caption, lang) {
 
 async function featureGraphic(browser, lang, titlePng) {
   const page = await browser.newPage({ viewport: { width: 1024, height: 500 } });
-  const name = lang === 'ja' ? 'つみあげ出前' : 'Stack &amp; Deliver';
-  const tag = lang === 'ja' ? '頭の上に積んで、順番どおりにお届け' : 'Stack it on your head, serve it in order';
+  const name = lang === 'ja' ? 'だし回し' : 'Stock Pipes';
+  const tag = lang === 'ja' ? '竹の樋を回して、だしをお椀へ' : 'Turn the bamboo pipes, fill every bowl';
   await page.setContent(`<!doctype html><html><head><style>
     @font-face { font-family: Yusei; src: ${FONT}; }
     body { margin:0; width:1024px; height:500px; overflow:hidden; font-family: Yusei, sans-serif;

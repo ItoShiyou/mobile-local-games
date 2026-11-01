@@ -33,6 +33,7 @@ class BoardFrame {
     this.hint,
     this.cursor,
     this.time = 0,
+    this.wonAge = 99,
   });
 
   final GameState state;
@@ -50,7 +51,21 @@ class BoardFrame {
   /// Seconds, for idle animation. Frozen at 0 when motion is reduced.
   final double time;
 
+  /// Seconds since the stage was finished (99 when not finished, or when
+  /// motion is reduced): a glow runs out from the pots along the pipes.
+  final double wonAge;
+
   bool get night => palette.night || scene.alwaysNight;
+}
+
+/// How long the finishing glow takes to reach the farthest bowl.
+Duration winWaveDuration(GameState s) {
+  final dist = BoardPainter._distances(s);
+  var far = 0;
+  for (final w in s.board.bowls) {
+    far = math.max(far, dist[s.board.index(w.pos.x, w.pos.y)] ?? 0);
+  }
+  return Duration(milliseconds: (far / BoardPainter._waveSpeed * 1000).round());
 }
 
 Duration transitionDuration(Transition t) => t.isUndo ? const Duration(milliseconds: 120) : const Duration(milliseconds: 200);
@@ -117,6 +132,7 @@ class BoardPainter {
     }
 
     // ---- pipes ----
+    final wave = f.wonAge < _waveSeconds ? _distances(s) : null;
     final tr = f.transition;
     final p = tr == null ? 1.0 : f.transitionP;
     for (var y = 0; y < b.height; y++) {
@@ -145,7 +161,13 @@ class BoardPainter {
         canvas.save();
         canvas.translate(center.dx + shake.dx, center.dy + shake.dy);
         canvas.rotate(angle);
-        _pipe(canvas, b, flow, x, y, kind, s.maskAt(x, y), u, t, iron: b.fixed.contains(Pos(x, y)), settled: angle == 0);
+        var glow = 0.0;
+        final dist = wave?[b.index(x, y)];
+        if (dist != null) {
+          final front = f.wonAge * _waveSpeed - dist;
+          glow = math.exp(-front * front / 1.6) * math.sqrt((1 - f.wonAge / _waveSeconds).clamp(0.0, 1.0));
+        }
+        _pipe(canvas, b, flow, x, y, kind, s.maskAt(x, y), u, t, iron: b.fixed.contains(Pos(x, y)), settled: angle == 0, glow: glow);
         canvas.restore();
         if (hinted) Art.paws(canvas, center + Offset(u * .28, u * .28), u * .7, f.palette.shu, .8);
       }
@@ -156,7 +178,18 @@ class BoardPainter {
       _pot(canvas, pot, u, t);
     }
     for (var i = 0; i < b.bowls.length; i++) {
-      _bowl(canvas, b.bowls[i], flow.bowls[i], u, t, flow.won);
+      final bowl = b.bowls[i];
+      _bowl(canvas, bowl, flow.bowls[i], u, t, flow.won);
+      // the stock arrives: a ring spreads from the bowl
+      final dist = wave?[b.index(bowl.pos.x, bowl.pos.y)];
+      if (dist != null) {
+        final k = f.wonAge - dist / _waveSpeed;
+        if (k > 0 && k < .6) {
+          final c = Offset((bowl.pos.x + .5) * u, (bowl.pos.y + .45) * u);
+          final color = stockColor[bowl.want]!;
+          canvas.drawCircle(c, u * (.3 + k * .7), Art.stroke(color.withValues(alpha: 1 - k / .6), u * .07 * (1 - k / .6) + 1));
+        }
+      }
     }
 
     // ---- stock spilling out of open ends ----
@@ -192,8 +225,36 @@ class BoardPainter {
     }
   }
 
+  static const _waveSpeed = 7.0; // cells per second
+  static const _waveSeconds = 2.2;
+
+  /// Steps from the nearest pot to every cell, along joined openings.
+  static Map<int, int> _distances(GameState s) {
+    final b = s.board;
+    final dist = <int, int>{};
+    final queue = <Pos>[];
+    for (final p in b.pots) {
+      dist[b.index(p.pos.x, p.pos.y)] = 0;
+      queue.add(p.pos);
+    }
+    for (var i = 0; i < queue.length; i++) {
+      final at = queue[i];
+      final m = s.maskAt(at.x, at.y);
+      for (final d in Dir.values) {
+        if (m & d.bit == 0) continue;
+        final n = at.step(d);
+        if (!b.inside(n.x, n.y) || s.maskAt(n.x, n.y) & d.opposite.bit == 0) continue;
+        final k = b.index(n.x, n.y);
+        if (dist.containsKey(k)) continue;
+        dist[k] = dist[b.index(at.x, at.y)]! + 1;
+        queue.add(n);
+      }
+    }
+    return dist;
+  }
+
   /// A bamboo (or iron) pipe centred on the origin, with the stock inside.
-  void _pipe(Canvas canvas, Board b, StockFlow flow, int x, int y, String kind, int mask, double u, double t, {required bool iron, required bool settled}) {
+  void _pipe(Canvas canvas, Board b, StockFlow flow, int x, int y, String kind, int mask, double u, double t, {required bool iron, required bool settled, double glow = 0}) {
     final shell = iron ? const Color(0xFF7D7B78) : const Color(0xFFC9B07A);
     final shellDark = iron ? const Color(0xFF5E5C58) : const Color(0xFF9E8650);
     final arms = [for (final d in Dir.values) if (mask & d.bit != 0) d];
@@ -223,6 +284,11 @@ class BoardPainter {
         final color = stockColor[carry]!;
         for (final d in dirs) {
           arm(d, u * .13, color);
+        }
+        if (glow > .01) {
+          for (final d in dirs) {
+            arm(d, u * (.13 + .1 * glow), Color.lerp(color, const Color(0xFFFFF8E4), .85 * glow)!);
+          }
         }
         // a slow shimmer running along the stock
         final k = (t * .8 + (x + y) * .17) % 1;

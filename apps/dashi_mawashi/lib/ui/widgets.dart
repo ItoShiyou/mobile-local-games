@@ -971,24 +971,6 @@ class _GimmickPainter extends CustomPainter {
   bool shouldRepaint(_GimmickPainter old) => old.id != id || old.pal != pal;
 }
 
-class DishIcon extends StatelessWidget {
-  const DishIcon(this.kind, {super.key, this.size = 28});
-  final String kind;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _DishPainter(kind));
-}
-
-class _DishPainter extends CustomPainter {
-  _DishPainter(this.kind);
-  final String kind;
-  @override
-  void paint(Canvas canvas, Size size) => Art.food(canvas, size.center(Offset.zero), size.width, kind);
-  @override
-  bool shouldRepaint(_DishPainter old) => old.kind != kind;
-}
-
 /// The courier on their own, for menus and speech.
 class CourierPortrait extends StatelessWidget {
   const CourierPortrait({super.key, this.size = 56, this.look = Dir.down, this.stack = const []});
@@ -999,7 +981,7 @@ class CourierPortrait extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pal = context.palette;
-    return CustomPaint(size: Size(size, size * (1 + stack.length * .18)), painter: _CourierPainter(pal, look, stack));
+    return CustomPaint(size: Size(size, size * (1 + stack.length * .2 + (stack.isEmpty ? 0 : .12))), painter: _CourierPainter(pal, look, stack));
   }
 }
 
@@ -1014,7 +996,32 @@ class _CourierPainter extends CustomPainter {
     final head = Offset(u / 2, size.height - u * .58);
     Art.courier(canvas, head, u, look, pal);
     for (var k = 0; k < stack.length; k++) {
-      Art.stackDish(canvas, head + Offset(0, -u * .3 - k * u * .16), u * 1.1, stack[k]);
+      _bowl(canvas, head + Offset(0, -u * .34 - k * u * .17), u * .62, stockColor[stack[k]] ?? stockColor['kn']!, steam: k == stack.length - 1);
+    }
+  }
+
+  /// A lacquered bowl of stock balanced on the cat's head.
+  static void _bowl(Canvas canvas, Offset c, double u, Color stock, {bool steam = false}) {
+    final rim = Rect.fromCenter(center: c - Offset(0, u * .1), width: u, height: u * .3);
+    final body = Path()
+      ..moveTo(rim.left, rim.center.dy)
+      ..quadraticBezierTo(rim.left + u * .06, c.dy + u * .26, c.dx, c.dy + u * .26)
+      ..quadraticBezierTo(rim.right - u * .06, c.dy + u * .26, rim.right, rim.center.dy)
+      ..close();
+    final line = math.max(1.2, u * .05);
+    canvas.drawPath(body, Art.fill(const Color(0xFF9A2E24)));
+    canvas.drawPath(body, Art.stroke(kInk, line));
+    canvas.drawLine(Offset(c.dx - u * .3, c.dy + u * .03), Offset(c.dx - u * .12, c.dy + u * .12), Art.stroke(Colors.white.withValues(alpha: .35), line));
+    canvas.drawOval(rim, Art.fill(const Color(0xFF2A1E18)));
+    canvas.drawOval(rim.deflate(u * .05), Art.fill(stock));
+    canvas.drawOval(rim, Art.stroke(kInk, line));
+    if (steam) {
+      for (final k in [-1.0, 1.0]) {
+        final path = Path()
+          ..moveTo(c.dx + k * u * .12, c.dy - u * .26)
+          ..quadraticBezierTo(c.dx + k * u * .26, c.dy - u * .42, c.dx + k * u * .1, c.dy - u * .58);
+        canvas.drawPath(path, Art.stroke(kInk.withValues(alpha: .35), line));
+      }
     }
   }
 
