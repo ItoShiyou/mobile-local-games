@@ -133,6 +133,52 @@ const _matsuri = Scene(
   alwaysNight: true,
 );
 
+const _soba = Scene(
+  id: 'soba',
+  floor: FloorKind.planks,
+  wall: WallKind.plaster,
+  // a winter noodle house: dark worn boards, cream plaster, snow on the roofs
+  floorA: Color(0xFFC79B68),
+  floorB: Color(0xFFB98D5C),
+  floorLine: Color(0xFF7E5A38),
+  wallTop: Color(0xFF7A5537),
+  wallFront: Color(0xFFF3E8D2),
+  wallTrim: Color(0xFF5E3F28),
+  outside: Color(0xFFD9DEDD),
+  decor: [Decor.tanzaku, Decor.lantern, Decor.window, Decor.shelf, Decor.teapot, Decor.tanzaku],
+);
+
+const _sakaba = Scene(
+  id: 'sakaba',
+  floor: FloorKind.tiles,
+  wall: WallKind.plaster,
+  // a busy tavern with shared tables: concrete-grey tiles, smoke-yellowed walls
+  floorA: Color(0xFFD8D2C4),
+  floorB: Color(0xFFC6BEAD),
+  floorLine: Color(0xFF9C9382),
+  wallTop: Color(0xFF8A5B3A),
+  wallFront: Color(0xFFEBD9AE),
+  wallTrim: Color(0xFF6A3F27),
+  outside: Color(0xFF8C7A63),
+  decor: [Decor.poster, Decor.tanzaku, Decor.lantern, Decor.maneki, Decor.tanzaku, Decor.clock],
+);
+
+const _asaichi = Scene(
+  id: 'asaichi',
+  floor: FloorKind.stones,
+  wall: WallKind.stalls,
+  // the morning market: indigo-and-white stall awnings in daylight
+  floorA: Color(0xFFD9D1BF),
+  floorB: Color(0xFFC9C0AC),
+  floorLine: Color(0xFF9A907C),
+  wallTop: Color(0xFF3F5F86),
+  wallFront: Color(0xFFF4ECDC),
+  wallTrim: Color(0xFF2E4663),
+  outside: Color(0xFF9DAF86),
+  decor: [Decor.flowerpot, Decor.poster, Decor.plant, Decor.flowerpot],
+  sunny: true,
+);
+
 /// Scene for each chapter id (see levels.dart).
 const scenes = <String, Scene>{
   'basic': _diner,
@@ -140,6 +186,9 @@ const scenes = <String, Scene>{
   'tray': _kissa,
   'oneway': _alley,
   'mix': _matsuri,
+  'catTongue': _soba,
+  'shared': _sakaba,
+  'cart': _asaichi,
 };
 
 Scene sceneFor(String chapterId) => scenes[chapterId] ?? _diner;

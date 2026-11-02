@@ -92,6 +92,35 @@ class _BackdropPainter extends CustomPainter {
         final fence = Rect.fromLTWH(0, h * .26, w, h * .74);
         _wainscot(canvas, fence, sc.wallFront, vertical: true, board: 26);
         canvas.drawRect(Rect.fromLTWH(0, fence.top, w, 8), Art.fill(sc.wallTrim));
+      case WallKind.stalls when !night:
+        // a market street by day: sky, a row of shop roofs, awnings below
+        _bandedSky(canvas, r, const [Color(0xFFA9CBD8), Color(0xFFC6DCDC), Color(0xFFEDE4CB)]);
+        // low tiled roofs of the shops across the street
+        final roofs = Path()..moveTo(0, h * .3);
+        for (var i = 0; i <= 6; i++) {
+          final x = w * i / 6;
+          final top = h * (.235 + (_h(i, 31) % 4) / 200);
+          roofs
+            ..lineTo(x + w / 60, top)
+            ..lineTo(x + w / 6 - w / 60, top + h * .004)
+            ..lineTo(x + w / 6, h * .27);
+        }
+        roofs
+          ..lineTo(w, h)
+          ..lineTo(0, h)
+          ..close();
+        canvas.drawPath(roofs, Art.fill(const Color(0xFF8E9AA3)));
+        for (var x = 6.0; x < w; x += 9) {
+          canvas.drawLine(Offset(x, h * .245), Offset(x - 2, h * .27), Art.stroke(const Color(0x332A3440), 1.2));
+        }
+        canvas.drawRect(Rect.fromLTWH(0, h * .27, w, 3), Art.fill(const Color(0xFF5E6A73)));
+        canvas.drawRect(Rect.fromLTWH(0, h * .3, w, h * .7), Art.fill(const Color(0xFFD8C7A6)));
+        // striped awnings
+        for (var i = 0; i < 12; i++) {
+          final x = w * i / 12;
+          canvas.drawRect(Rect.fromLTWH(x, h * .3, w / 12, h * .06), Art.fill(i.isEven ? sc.wallTop : sc.wallFront));
+        }
+        canvas.drawRect(Rect.fromLTWH(0, h * .36, w, 4), Art.fill(sc.wallTrim));
       case WallKind.stalls:
         _bandedSky(canvas, r, const [Color(0xFF141A33), Color(0xFF221F3E), Color(0xFF2E2A4A), Color(0xFF3E3350)]);
         final rnd = math.Random(5);
@@ -115,7 +144,7 @@ class _BackdropPainter extends CustomPainter {
         ..blendMode = BlendMode.multiply);
     }
     // lantern strings across the top at night / at the festival
-    if (sc.wall == WallKind.stalls || (night && sc.wall == WallKind.fence)) {
+    if (night && (sc.wall == WallKind.stalls || sc.wall == WallKind.fence)) {
       _lanternString(canvas, w, h * .22, 7, 1);
     }
   }

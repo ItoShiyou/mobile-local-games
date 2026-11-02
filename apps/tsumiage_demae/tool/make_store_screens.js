@@ -44,7 +44,7 @@ const shots = [
   { name: '03', progress: 'm09', open: 'm09', keys: ['ArrowDown', 'ArrowUp', 'ArrowRight', 'h'], wait: 700,
     ja: '困ったら提灯をともして\n足あとヒント', en: 'Stuck? Light the lantern\nfor a paw-print hint' },
   { name: '04', progress: 'o05', open: 'stages', keys: [], wait: 1800,
-    ja: '5つのお店で全46品', en: '46 orders\nin five shops' },
+    ja: '8つのお店で全70品', en: '70 orders\nin eight places' },
   { name: '05', progress: 'b01', open: 'b01', keys: ['ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight'], wait: 2200,
     ja: '目標の手数で届けて\n判子を集めよう', en: 'Deliver within par,\ncollect the stamps' },
   { name: '06', progress: 't05', open: 't05', keys: ['ArrowUp'], wait: 900, dark: true,
@@ -65,7 +65,7 @@ async function capture(browser, dev, lang, shot) {
     localStorage.clear();
     localStorage.setItem('flutter.progress.best.v1', JSON.stringify(JSON.stringify(best)));
     if (last) localStorage.setItem('flutter.progress.last.v1', JSON.stringify(last));
-    localStorage.setItem('flutter.progress.intro.v1', JSON.stringify(['howto', 'counter', 'tray', 'oneWay']));
+    localStorage.setItem('flutter.progress.intro.v1', JSON.stringify(['howto', 'counter', 'tray', 'oneWay', 'catTongue', 'shared', 'cart']));
     localStorage.setItem('flutter.settings.language', JSON.stringify(lang));
     localStorage.setItem('flutter.settings.music', 'false');
     localStorage.setItem('flutter.settings.sound', 'false');

@@ -90,6 +90,101 @@ void main() {
     expect(u.opposite, d);
   });
 
+  group('cat-tongued guest', () {
+    test('a fresh dish is too hot; it cools one step at a time', () {
+      // E wants a, cat tongue
+      final b = Board.parse(['#########', '#Pa....E#', '#########']);
+      var s = play(b.initialState(), [r]);
+      expect(s.heat, [coolSteps]);
+      s = play(s, [r, r]);
+      expect(s.heat, [coolSteps - 2]);
+      s = play(s, [r]);
+      expect(s.heat, [0]);
+      s = play(s, [r, r]);
+      expect(s.isWon, isTrue);
+    });
+
+    test('bumping while it still steams is refused', () {
+      final b = Board.parse(['######', '#PaE.#', '#....#', '######']);
+      final s = play(b.initialState(), [r]);
+      expect(s.move(r).blocked, Blocked.tooHot);
+      final cooled = play(s, [d, l, u, r]);
+      expect(cooled.heat, [0]);
+      expect(play(cooled, [r]).isWon, isTrue);
+    });
+
+    test('heat travels with each dish through a flip', () {
+      final b = Board.parse(['#######', '#Pa.bs#', '#A#####', '#######']);
+      final s = play(b.initialState(), [r, r, r, r]);
+      expect(s.stack, ['b', 'a']);
+      expect(s.heat, [coolSteps - 1, 0]);
+    });
+
+    test('a normal guest takes a hot dish', () {
+      final b = Board.parse(['######', '#PaA##', '######']);
+      expect(play(b.initialState(), [r, r]).isWon, isTrue);
+    });
+  });
+
+  group('shared table', () {
+    test('takes two dishes at once, in its order', () {
+      final b = Board.parse(['#######', '#Pba.W#', '#######'], orders: ['ab']);
+      final s = play(b.initialState(), [r, r, r, r]);
+      expect(s.isWon, isTrue);
+      expect(s.stack, isEmpty);
+    });
+
+    test('the wrong order, or only one dish, is refused', () {
+      final b = Board.parse(['#######', '#Pab.W#', '#######'], orders: ['ab']);
+      expect(play(b.initialState(), [r, r, r]).move(r).blocked, Blocked.wrongDish);
+      final one = Board.parse(['######', '#Pa.W#', '######'], orders: ['ab']);
+      expect(play(one.initialState(), [r, r]).move(r).blocked, Blocked.wrongDish);
+    });
+
+    test('needs an order for every table', () {
+      expect(() => Board.parse(['#####', '#P.W#', '#####']), throwsFormatException);
+    });
+  });
+
+  group('cart', () {
+    test('slides until something stops it; the cat stays put', () {
+      final b = Board.parse(['########', '#P=...#A', '########']);
+      final s = play(b.initialState(), [r]);
+      expect(s.pos, const Pos(1, 1));
+      expect(s.carts, [const Pos(5, 1)]);
+      expect(s.move(l).blocked, Blocked.wall);
+    });
+
+    test('a cart against a wall does not move', () {
+      final b = Board.parse(['#####', '#P=##', '#..A#', '#####']);
+      expect(b.initialState().move(r).blocked, Blocked.cartStuck);
+    });
+
+    test('a loaded cart delivers to the guest who wants its dish', () {
+      final b = Board.parse(['#######', '#Pw..A#', '#######']);
+      final s = play(b.initialState(), [r]);
+      expect(s.isWon, isTrue);
+      expect(s.isLoaded(0), isFalse);
+      expect(s.carts, [const Pos(4, 1)]);
+    });
+
+    test('dishes on the floor stop a cart; the wrong guest does not take it', () {
+      final b = Board.parse(['########', '#Px.a.B#', '#.....A#', '########']);
+      final s = play(b.initialState(), [r]);
+      expect(s.carts, [const Pos(3, 1)]);
+      final b2 = Board.parse(['######', '#Pw.B#', '#...A#', '######']);
+      final s2 = play(b2.initialState(), [r]);
+      expect(s2.carts, [const Pos(3, 1)]);
+      expect(s2.served, 0);
+    });
+
+    test('the cat can walk where a cart used to be', () {
+      final b = Board.parse(['#######', '#P=..A#', '#.....#', '#######']);
+      final s = play(b.initialState(), [r, r]);
+      expect(s.pos, const Pos(2, 1));
+    });
+  });
+
   group('GameController', () {
     test('undo, redo and restart', () {
       final c = GameController(allLevels.first);

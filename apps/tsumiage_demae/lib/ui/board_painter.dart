@@ -51,6 +51,7 @@ Duration transitionDuration(Transition t) {
   final pick = t.events.any((e) => e is PickedUp);
   if (flip && pick) return const Duration(milliseconds: 480);
   if (flip) return const Duration(milliseconds: 400);
+  if (t.events.any((e) => e is Pushed)) return const Duration(milliseconds: 380);
   if (t.events.any((e) => e is Served || e is Returned)) return const Duration(milliseconds: 340);
   if (pick) return const Duration(milliseconds: 250);
   return const Duration(milliseconds: 150);
@@ -589,9 +590,12 @@ class BoardPainter {
     PickedUp? picked;
     Served? served;
     Returned? returned;
+    Pushed? pushed;
     var flipped = false;
     for (final e in events) {
       switch (e) {
+        case Pushed():
+          pushed = e;
         case PickedUp():
           picked = e;
         case Served():
@@ -638,6 +642,26 @@ class BoardPainter {
       Art.floorDish(canvas, Offset((d.pos.x + .5) * u, (d.pos.y + .5) * u), u, d.color);
     }
 
+    final bump = f.bump;
+
+    // ---- carts (they slide when pushed) ----
+    for (var i = 0; i < board.carts.length; i++) {
+      var at = s.carts[i];
+      var c = Offset((at.x + .5) * u, (at.y + .5) * u);
+      var load = s.isLoaded(i) ? board.carts[i].load : null;
+      if (pushed?.cartIndex == i && tr != null && p < 1 && !tr.isUndo) {
+        final from = Offset((pushed!.from.x + .5) * u, (pushed.from.y + .5) * u);
+        c = Offset.lerp(from, c, Curves.easeOutCubic.transform(_seg(p, .15, .8)))!;
+        if (pushed.served != null && p < .85) load = board.carts[i].load;
+      }
+      var tilt = 0.0;
+      if (bump != null && bump.reason == Blocked.cartStuck && f.bumpP < 1 &&
+          s.pos.x + bump.dir.dx == at.x && s.pos.y + bump.dir.dy == at.y) {
+        tilt = math.sin(f.bumpP * math.pi * 6) * .06;
+      }
+      Art.cart(canvas, c, u, load, tilt: tilt);
+    }
+
     // ---- hint: paw prints on the next cell ----
     final hint = f.hint;
     if (hint != null && (tr == null || p >= 1)) {
@@ -654,7 +678,6 @@ class BoardPainter {
       if (a != pos && !tr.isUndo) hop = math.sin(_seg(p, 0, walkEnd) * math.pi) * u * .08;
       pos = Offset.lerp(a, pos, wp)!;
     }
-    final bump = f.bump;
     final bq = bump == null ? 1.0 : f.bumpP;
 
     // ---- guests above the courier's row, courier, then the rest ----
@@ -662,18 +685,21 @@ class BoardPainter {
     void drawGuest(int i) {
       final g = board.guests[i];
       final o = Offset(g.pos.x * u, g.pos.y * u);
-      final beingServed = served?.guestIndex == i && p < .72;
+      final beingServed = (served?.guestIndex == i || pushed?.served == i) && p < .72;
       final done = s.isServed(i) && !beingServed;
       final wrong = bump != null && bump.reason == Blocked.wrongDish && f.bumpAge < 1.1 &&
           s.pos.x + bump.dir.dx == g.pos.x && s.pos.y + bump.dir.dy == g.pos.y;
+      // a cat-tongued guest shown a steaming dish fans the ticket instead
+      final hot = bump != null && bump.reason == Blocked.tooHot && f.bumpAge < .8 &&
+          s.pos.x + bump.dir.dx == g.pos.x && s.pos.y + bump.dir.dy == g.pos.y;
       final bob = done ? math.sin(t * 4 + i) * u * .01 : 0.0;
       Art.guest(canvas, o, u, i, pal,
-          mood: done ? Mood.happy : (wrong ? Mood.upset : Mood.waiting), phase: t, servedDish: done ? g.wants : null, bob: bob);
+          mood: done ? Mood.happy : (wrong ? Mood.upset : Mood.waiting), phase: t, servedDish: done ? g.wants[0] : null, bob: bob);
       if (!done) {
         var bc = o + Offset(u * .76, u * .12 + math.sin(t * 2 + i) * u * .015);
-        if (wrong && f.bumpAge < .5) bc += Offset(math.sin(f.bumpAge * math.pi * 12) * u * .04, 0);
-        Art.orderTicket(canvas, bc, u, g.wants, upset: wrong, scale: wrong ? 1.12 : 1);
-      } else if (served?.guestIndex == i && f.transitionAge < 1.4) {
+        if ((wrong || hot) && f.bumpAge < .5) bc += Offset(math.sin(f.bumpAge * math.pi * 12) * u * .04, 0);
+        Art.orderTicket(canvas, bc, u, g.wants, upset: wrong, scale: wrong || hot ? 1.12 : 1, cool: g.catTongue);
+      } else if ((served?.guestIndex == i || pushed?.served == i) && f.transitionAge < 1.4) {
         // a little tune when the order arrives
         final k = (f.transitionAge / 1.4).clamp(0.0, 1.0);
         final tp = TextPainter(
@@ -715,6 +741,7 @@ class BoardPainter {
       }
     }
     final flipping = flipped && tr != null && p < 1 && p >= flipA;
+    final steamy = board.guests.any((g) => g.catTongue);
     final wobble = bump != null && bq < 1 && bump.reason == Blocked.full ? math.sin(bq * math.pi * 5) * u * .03 : 0.0;
     if (flipping) {
       final q = Curves.easeInOut.transform(_seg(p, flipA, 1));
@@ -762,6 +789,16 @@ class BoardPainter {
         }
         Art.stackDish(canvas, at, du, shown[k], highlight: k == shown.length - 1 && shown.length > 1);
       }
+      // steam: only on stages with a cat-tongued guest, where it matters
+      if (steamy && shown.length == s.stack.length) {
+        for (var k = 0; k < shown.length; k++) {
+          final h = s.heat[k];
+          if (h == 0) continue;
+          final top = k == shown.length - 1;
+          final at = slot(k) + Offset(wobble * (k + 1), 0);
+          Art.dishSteam(canvas, top ? at + Offset(0, -u * .2) : at + Offset(u * .4, -u * .02), top ? u : u * .7, h, t);
+        }
+      }
     }
 
     for (final i in order.where((i) => board.guests[i].pos.y >= catRow)) {
@@ -788,12 +825,14 @@ class BoardPainter {
           final dest = served != null
               ? Offset((board.guests[served.guestIndex].pos.x + .5) * u, (board.guests[served.guestIndex].pos.y + .66) * u)
               : Offset((board.counters[returned!.counterIndex].x + .5) * u, (board.counters[returned.counterIndex].y + .48) * u);
-          final from = slot(tr.to.stack.length);
+          final from = slot(tr.to.stack.length + (served?.under != null ? 1 : 0));
           final arc = Offset(0, -math.sin(q * math.pi) * u * .35);
           final at = Offset.lerp(from, dest, q)! + arc;
           canvas.save();
           canvas.translate(at.dx, at.dy);
           canvas.scale(served != null ? 1 - q * .2 : 1 - q * .6);
+          // a shared table takes the dish under it too, in one go
+          if (served?.under != null) Art.stackDish(canvas, Offset(0, u * .16), du, served!.under!);
           Art.stackDish(canvas, Offset.zero, du, color);
           canvas.restore();
         }

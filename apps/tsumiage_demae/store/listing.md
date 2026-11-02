@@ -13,14 +13,14 @@
 
 - **サブタイトル**（上限30）：頭に積んで、順番に届けるパズル
 - **プロモーションテキスト**（上限170）：
-  料理の上を通れば頭に積み上がり、渡せるのはいちばん上の一皿だけ。どの順番で拾えば、お客さん全員に届けられる？ 商店街のねこの出前屋さんと、全46品のパズルをどうぞ。
+  料理の上を通れば頭に積み上がり、渡せるのはいちばん上の一皿だけ。どの順番で拾えば、お客さん全員に届けられる？ 商店街のねこの出前屋さんと、全70品のパズルをどうぞ。
 - **キーワード**（上限100、カンマ区切り。他社の商標は入れない）：
   パズル,ねこ,猫,出前,料理,脳トレ,思考,ロジック,オフライン,和風,かわいい,ひとり,暇つぶし,積み上げ,商店街
 
 ### Google Play
 
 - **簡単な説明**（上限80）：
-  頭の上に料理を積んで、順番どおりにお届け。ねこの出前屋さんのパズル全46品。
+  頭の上に料理を積んで、順番どおりにお届け。ねこの出前屋さんのパズル全70品。
 
 ### 説明文（両ストア共通、上限4000）
 
@@ -35,9 +35,9 @@
 あとから拾った料理ほど上に来るので、どの道を、どの順番で通るかがすべて。
 一歩ごとに考える、静かで手ごたえのあるパズルです。
 
-■ 5つのお店、全46品
-まちの食堂、駅前の定食屋、坂の上の喫茶店、路地裏、夏祭りの夜。
-お店ごとに、返却口・くるりのお盆・一方通行といった新しいしかけが登場します。
+■ 8つのお店、全70品
+まちの食堂、駅前の定食屋、坂の上の喫茶店、路地裏、夏祭りの夜、そば屋、大衆酒場、朝市。
+お店ごとに、返却口・くるりのお盆・一方通行、冷めるまで待つねこ舌のお客さん、2皿いっしょに頼む相席、押すと滑る台車といった新しいしかけが登場します。
 すべてのステージは解けることと、目標手数が最短であることを確かめてあります。
 
 ■ 何度でもやり直せる
@@ -62,14 +62,14 @@
 
 - **Subtitle** (max 30): A cozy stack-and-serve puzzle
 - **Promotional text** (max 170):
-  Walk over a dish and it lands on your head – but you can only hand over the one on top. Plan your route to serve every guest in 46 hand-checked puzzles.
+  Walk over a dish and it lands on your head – but you can only hand over the one on top. Plan your route to serve every guest in 70 hand-checked puzzles.
 - **Keywords** (max 100, comma separated):
   puzzle,cat,cozy,logic,brain,food,delivery,offline,japanese,relaxing,stack,order,diner,waiter
 
 ### Google Play
 
 - **Short description** (max 80):
-  Stack dishes on your head and serve them in order. 46 cozy logic puzzles.
+  Stack dishes on your head and serve them in order. 70 cozy logic puzzles.
 
 ### Description (both stores, max 4000)
 
@@ -82,8 +82,8 @@ The rules are simple:
 
 The last dish you pick up is always on top, so your route decides everything. A calm puzzle where every step counts.
 
-■ Five shops, 46 orders
-A corner diner, a set-meal shop by the station, a hilltop café, the back alleys and a summer festival night – each with a new twist: return counters, flip trays and one-way lanes. Every stage is checked to be solvable, and its par is the true shortest solution.
+■ Eight places, 70 orders
+A corner diner, a set-meal shop by the station, a hilltop café, the back alleys, a summer festival night, a noodle house, a tavern and a morning market – each with a new twist: return counters, flip trays, one-way lanes, cat-tongued guests who wait for their food to cool, shared tables that order two dishes at once, and rolling carts. Every stage is checked to be solvable, and its par is the true shortest solution.
 
 ■ Undo as often as you like
 Stuck? Light the lantern and paw prints show the way. Serve the wrong dish and you'll see exactly which plate went on too early.

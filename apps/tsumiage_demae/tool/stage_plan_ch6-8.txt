@@ -1,0 +1,29 @@
+# Generator options for chapters 6-8 (one stage per line; the first
+# candidate printed was taken).
+#   dart run tool/gen_levels.dart <options> --keep=6
+# n05, n06 and k08 needed --soft: with the new rules, a return counter or
+# tray that is strictly required was too rare, so they only have to matter.
+n01 --gims=catTongue --cap=2 --min=6 --max=10 --wmin=4 --wmax=5 --hmin=2 --hmax=3 --gmin=1 --gmax=1 --extra=0 --colors=2 --owmargin=1 --n=25000 --seed=7
+n02 --gims=catTongue --cap=2 --min=9 --max=13 --wmin=4 --wmax=5 --hmin=3 --hmax=4 --gmin=2 --gmax=2 --extra=0 --colors=2 --owmargin=2 --n=25000 --seed=7
+n03 --gims=catTongue --cap=2 --min=11 --max=15 --wmin=4 --wmax=5 --hmin=3 --hmax=4 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=3 --n=25000 --seed=7
+n04 --gims=catTongue --cap=2 --min=13 --max=18 --wmin=5 --wmax=6 --hmin=4 --hmax=4 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=3 --n=25000 --seed=7
+n05 --gims=catTongue,counter --soft=counter --cap=2 --min=13 --max=20 --wmin=5 --wmax=6 --hmin=3 --hmax=4 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=30000 --seed=21
+n06 --gims=catTongue,tray --soft=tray --cap=2 --min=14 --max=21 --wmin=5 --wmax=6 --hmin=3 --hmax=4 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=30000 --seed=22
+n07 --gims=catTongue,oneWay --cap=2 --min=15 --max=22 --wmin=5 --wmax=6 --hmin=4 --hmax=5 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=25000 --seed=7
+n08 --gims=catTongue,oneWay --cap=3 --min=16 --max=26 --wmin=5 --wmax=6 --hmin=4 --hmax=5 --gmin=3 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=40000 --seed=13
+w01 --gims=shared --cap=2 --min=5 --max=10 --wmin=4 --wmax=5 --hmin=2 --hmax=3 --gmin=1 --gmax=1 --extra=0 --colors=2 --owmargin=1 --n=25000 --seed=7
+w02 --gims=shared --cap=2 --min=8 --max=13 --wmin=4 --wmax=5 --hmin=3 --hmax=4 --gmin=1 --gmax=2 --extra=0 --colors=2 --owmargin=2 --n=25000 --seed=7
+w03 --gims=shared --cap=3 --min=10 --max=15 --wmin=4 --wmax=5 --hmin=3 --hmax=4 --gmin=2 --gmax=2 --extra=1 --colors=3 --owmargin=3 --n=25000 --seed=7
+w04 --gims=shared --cap=3 --min=12 --max=18 --wmin=5 --wmax=6 --hmin=3 --hmax=4 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=3 --n=25000 --seed=7
+w05 --gims=shared,tray --cap=3 --min=12 --max=19 --wmin=5 --wmax=6 --hmin=3 --hmax=4 --gmin=2 --gmax=2 --extra=1 --colors=3 --owmargin=2 --n=25000 --seed=7
+w06 --gims=shared,counter --cap=3 --min=13 --max=20 --wmin=5 --wmax=6 --hmin=3 --hmax=4 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=25000 --seed=7
+w07 --gims=shared,catTongue --cap=3 --min=14 --max=22 --wmin=5 --wmax=6 --hmin=4 --hmax=5 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=25000 --seed=7
+w08 --gims=shared,tray,oneWay --cap=3 --min=15 --max=24 --wmin=5 --wmax=6 --hmin=4 --hmax=5 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=25000 --seed=7
+k01 --gims=cart --cap=2 --min=4 --max=9 --wmin=4 --wmax=5 --hmin=2 --hmax=3 --gmin=1 --gmax=1 --extra=0 --colors=2 --owmargin=1 --n=25000 --seed=7
+k02 --gims=cart --cap=2 --min=8 --max=13 --wmin=4 --wmax=5 --hmin=3 --hmax=4 --gmin=2 --gmax=2 --extra=0 --colors=2 --owmargin=2 --n=25000 --seed=7
+k03 --gims=cart --cap=2 --min=10 --max=15 --wmin=4 --wmax=5 --hmin=3 --hmax=4 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=3 --n=25000 --seed=7
+k04 --gims=cart --cap=2 --min=12 --max=18 --wmin=5 --wmax=6 --hmin=4 --hmax=4 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=3 --n=25000 --seed=7
+k05 --gims=cart,oneWay --cap=2 --min=12 --max=19 --wmin=5 --wmax=6 --hmin=3 --hmax=4 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=25000 --seed=7
+k06 --gims=cart,catTongue --cap=2 --min=13 --max=20 --wmin=5 --wmax=6 --hmin=4 --hmax=4 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=25000 --seed=7
+k07 --gims=cart,shared --cap=3 --min=14 --max=22 --wmin=5 --wmax=6 --hmin=4 --hmax=5 --gmin=2 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=25000 --seed=7
+k08 --gims=cart,tray,counter --soft=tray,counter --cap=3 --min=15 --max=24 --wmin=5 --wmax=6 --hmin=4 --hmax=5 --gmin=3 --gmax=3 --extra=1 --colors=3 --owmargin=2 --n=20000 --seed=23

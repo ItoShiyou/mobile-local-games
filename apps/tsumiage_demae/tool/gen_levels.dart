@@ -1,6 +1,7 @@
 // Random stage generator used while designing the stage list.
 //
 //   dart run tool/gen_levels.dart --gims=counter,tray --cap=2 --min=12 --max=24
+//   (--soft=tray: the tray only has to change the shortest solution)
 //
 // Every candidate is solved exhaustively; only stages that are solvable,
 // need every listed gimmick, and leave no floor unused are printed (JSON,
@@ -22,6 +23,8 @@ void main(List<String> args) {
       .where((s) => s.isNotEmpty)
       .map((s) => Gimmick.values.byName(s))
       .toList();
+  // gimmicks that only have to change the shortest solution, not be needed
+  final soft = (opt['soft'] ?? '').split(',').where((s) => s.isNotEmpty).map((s) => Gimmick.values.byName(s)).toSet();
   final cap = i('cap', 2);
   final minLen = i('min', 8), maxLen = i('max', 24);
   final wMin = i('wmin', 4), wMax = i('wmax', 5);
@@ -55,10 +58,28 @@ void main(List<String> args) {
     for (var n = 0; n < walls; n++) {
       put('#');
     }
+    final orders = <String>[];
     for (var n = 0; n < guests; n++) {
       final c = String.fromCharCode(97 + rnd.nextInt(colors));
-      put(c.toUpperCase());
-      put(c);
+      // the first guests take on this run's guest gimmicks
+      if (n == 0 && gims.contains(Gimmick.shared)) {
+        var c2 = String.fromCharCode(97 + rnd.nextInt(colors));
+        if (c2 == c) c2 = String.fromCharCode(97 + (c.codeUnitAt(0) - 97 + 1) % colors);
+        put('W');
+        orders.add(c + c2);
+        put(c);
+        put(c2);
+      } else if (n == (gims.contains(Gimmick.shared) ? 1 : 0) && gims.contains(Gimmick.catTongue)) {
+        put(String.fromCharCode(c.codeUnitAt(0) - 97 + 69));
+        put(c);
+      } else if (n == guests - 1 && gims.contains(Gimmick.cart) && rnd.nextBool()) {
+        // delivered by a loaded cart instead of by hand
+        put(c.toUpperCase());
+        put(String.fromCharCode(c.codeUnitAt(0) + 22));
+      } else {
+        put(c.toUpperCase());
+        put(c);
+      }
     }
     for (var n = 0; n < extras; n++) {
       put(String.fromCharCode(97 + rnd.nextInt(colors)));
@@ -75,20 +96,32 @@ void main(List<String> args) {
           for (var n = 0, m = 2 + rnd.nextInt(4); n < m; n++) {
             put('<>^v'[rnd.nextInt(4)]);
           }
+        case Gimmick.cart:
+          for (var n = 0, m = 1 + rnd.nextInt(2); n < m; n++) {
+            put('=');
+          }
+        case Gimmick.catTongue:
+        case Gimmick.shared:
+          break; // placed with the guests above
       }
     }
     final map = trim([for (final r in g) r.join()]);
-    final key = map.join('/');
+    final key = '${map.join('/')}|${orders.join(',')}';
     if (found.containsKey(key)) continue;
-    final a = analyze(map, cap, maxStates: 60000);
+    final a = analyze(map, cap, orders: orders, maxStates: 60000);
     if (!a.solvable || a.unusedFloor > 0) continue;
     final len = a.solution!.length;
     if (len < minLen || len > maxLen) continue;
-    if (!gims.every((gm) => isEssential(map, cap, gm, oneWayMargin: i('owmargin', 4)))) continue;
+    if (!gims.every((gm) => soft.contains(gm)
+        ? gimmickMatters(map, cap, gm, orders: orders)
+        : isEssential(map, cap, gm, orders: orders, oneWayMargin: i('owmargin', 4)))) {
+      continue;
+    }
     final score = a.trapRatio * 40 + len * 0.6 + (a.reachable > 3000 ? -10 : 0);
     found[key] = {
       'map': map,
       'cap': cap,
+      if (orders.isNotEmpty) 'orders': orders,
       'par': len,
       'reachable': a.reachable,
       'trap': double.parse(a.trapRatio.toStringAsFixed(2)),

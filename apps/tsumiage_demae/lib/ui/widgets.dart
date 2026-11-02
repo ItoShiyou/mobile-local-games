@@ -333,8 +333,11 @@ class _HankoPainter extends CustomPainter {
 
 /// Order slip pinned on a line: shows the dish; stamped once served.
 class OrderSlip extends StatelessWidget {
-  const OrderSlip({super.key, required this.kind, required this.served, required this.stamp, this.index = 0});
+  const OrderSlip({super.key, required this.kind, required this.served, required this.stamp, this.index = 0, this.cool = false});
   final String kind;
+
+  /// A cat-tongued guest's order: drawn with the fan.
+  final bool cool;
   final bool served;
   final String stamp;
   final int index;
@@ -344,13 +347,14 @@ class OrderSlip extends StatelessWidget {
     final pal = context.palette;
     return Transform.rotate(
       angle: ((index * 37) % 7 - 3) * .025,
-      child: CustomPaint(size: const Size(38, 46), painter: _SlipPainter(kind, served, stamp, pal)),
+      child: CustomPaint(size: const Size(38, 46), painter: _SlipPainter(kind, served, stamp, pal, cool)),
     );
   }
 }
 
 class _SlipPainter extends CustomPainter {
-  _SlipPainter(this.kind, this.served, this.stamp, this.pal);
+  _SlipPainter(this.kind, this.served, this.stamp, this.pal, this.cool);
+  final bool cool;
   final String kind;
   final bool served;
   final String stamp;
@@ -375,7 +379,21 @@ class _SlipPainter extends CustomPainter {
       ..color = kInk.withValues(alpha: .6));
     canvas.drawLine(Offset(6, h - 12), Offset(w - 6, h - 12), Paint()..color = const Color(0x33C8452F)..strokeWidth = 1);
     canvas.drawCircle(Offset(w / 2, 5), 3, Paint()..color = pal.shu); // pin
-    Art.food(canvas, Offset(w / 2, h * .46), w * .62, kind);
+    if (kind.length == 2) {
+      // a shared table: the top dish over the one under it
+      Art.food(canvas, Offset(w / 2 + 2, h * .3), w * .42, kind[0]);
+      Art.food(canvas, Offset(w / 2 + 2, h * .62), w * .42, kind[1]);
+      canvas.drawPath(
+          Path()
+            ..moveTo(9, h * .27)
+            ..lineTo(6, h * .27)
+            ..lineTo(6, h * .65)
+            ..lineTo(9, h * .65),
+          Art.stroke(pal.shu, 1.4));
+    } else {
+      Art.food(canvas, Offset(w / 2, h * .46), w * .62, kind);
+    }
+    if (cool) Art.coolFan(canvas, Offset(w - 8, h * .66), w * .9);
     if (served) {
       canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0x66FFFBF1));
       canvas.save();
@@ -961,6 +979,14 @@ class _GimmickPainter extends CustomPainter {
         canvas.drawRRect(r, Art.fill(const Color(0xFFBDB5A5)));
         canvas.drawRRect(r, Art.stroke(kInk, u * .03));
         Art.paintedArrow(canvas, c, u, Dir.right);
+      case 'catTongue':
+        Art.floorDish(canvas, c + Offset(-u * .08, u * .06), u * .8, 'c');
+        Art.dishSteam(canvas, c + Offset(-u * .08, -u * .12), u * 1.1, 2, 0);
+        Art.coolFan(canvas, c + Offset(u * .26, -u * .18), u * 1.4);
+      case 'shared':
+        Art.orderTicket(canvas, c + Offset(-u * .05, -u * .04), u * 1.25, 'ab', tilt: -.05);
+      case 'cart':
+        Art.cart(canvas, c + Offset(0, u * .04), u * .95, 'a');
       default:
         Art.floorDish(canvas, c, u, 'a');
     }

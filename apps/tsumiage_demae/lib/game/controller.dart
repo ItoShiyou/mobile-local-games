@@ -75,7 +75,7 @@ class GameController extends ChangeNotifier {
       if (r.blocked != Blocked.finished) {
         String? wanted;
         final gi = board.guestAt(state.pos.x + d.dx, state.pos.y + d.dy);
-        if (gi >= 0) wanted = board.guests[gi].wants;
+        if (gi >= 0) wanted = board.guests[gi].wants[0];
         _bump = Bump(++_serial, d, r.blocked!, wanted: wanted);
         if (_stuck) _noticed = true;
         notifyListeners();

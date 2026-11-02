@@ -164,6 +164,8 @@ class StringsJa extends Strings {
         Blocked.emptyHands => 'あっ、手ぶらだった',
         Blocked.alreadyServed => 'もう届けたよ',
         Blocked.counterUsed => '返却口はもう閉まってる',
+        Blocked.tooHot => 'まだ熱いって。少し冷ましてから',
+        Blocked.cartStuck => '台車がつっかえて動かない',
         Blocked.finished => '',
       };
   @override
@@ -205,6 +207,9 @@ class StringsJa extends Strings {
         'counter' => '返却口',
         'tray' => 'くるりのお盆',
         'oneWay' => '一方通行',
+        'catTongue' => 'ねこ舌のお客さん',
+        'shared' => '相席の注文',
+        'cart' => '動く台車',
         _ => '',
       };
   @override
@@ -212,6 +217,9 @@ class StringsJa extends Strings {
         'counter' => 'ぶつかると、いちばん上の料理を1皿だけ引き取ってくれる。使えるのは1回だけで、そのあとはシャッターが閉まるよ。',
         'tray' => '上に乗ると、頭の上の料理の順番が上下さかさまになるよ。',
         'oneWay' => '矢印の向きに進むときだけ入れる道。戻り道に気をつけて。',
+        'catTongue' => 'うちわの伝票のお客さんは、ねこ舌。拾ったばかりの料理は湯気が立っていて受け取ってくれない。湯気は1歩ごとに1本ずつ消えるよ。',
+        'shared' => '相席のお客さんは、2皿いっしょに受け取る。伝票の上の料理がいちばん上、下の料理がそのすぐ下に来るように積んでから届けよう。',
+        'cart' => '台車にぶつかると、押されて何かにぶつかるまで滑っていく（ねこはその場に残る）。料理の載った台車は、その料理を待つお客さんにぶつかればそのまま届くよ。',
         _ => '',
       };
   @override
@@ -265,10 +273,15 @@ class StringsJa extends Strings {
     final head = s.stack.isEmpty ? 'なし' : s.stack.reversed.map(dishName).join('、');
     final waiting = [
       for (var i = 0; i < s.board.guests.length; i++)
-        if (!s.isServed(i)) dishName(s.board.guests[i].wants),
+        if (!s.isServed(i)) _order(s.board.guests[i]),
     ];
     return '盤面。頭の上（上から）：$head。まだ届けていない注文：${waiting.isEmpty ? 'なし' : waiting.join('、')}。';
   }
+
+  String _order(Guest g) => [
+        g.shared ? '${dishName(g.wants[0])}の下に${dishName(g.wants[1])}（相席）' : dishName(g.wants),
+        if (g.catTongue) '（冷ましてから）',
+      ].join();
 
   @override
   String get keyboardHelp => '矢印キー／WASDで移動、Zで戻す、Yで進む、Rでやり直し、Hでヒント';
@@ -339,6 +352,8 @@ class StringsEn extends Strings {
         Blocked.emptyHands => 'Oops, my hands are empty',
         Blocked.alreadyServed => 'Already served them',
         Blocked.counterUsed => 'The counter\'s closed now',
+        Blocked.tooHot => 'Too hot! Let it cool a little',
+        Blocked.cartStuck => 'The cart won\'t budge',
         Blocked.finished => '',
       };
   @override
@@ -380,6 +395,9 @@ class StringsEn extends Strings {
         'counter' => 'Return counter',
         'tray' => 'Flip tray',
         'oneWay' => 'One-way lane',
+        'catTongue' => 'Cat-tongued guest',
+        'shared' => 'Shared table',
+        'cart' => 'Rolling cart',
         _ => '',
       };
   @override
@@ -387,6 +405,9 @@ class StringsEn extends Strings {
         'counter' => 'Bump it to hand back your top dish. It works once, then the shutter comes down.',
         'tray' => 'Step on it and your whole stack turns upside down.',
         'oneWay' => 'You can only enter it going the way the arrows point. Mind the way back.',
+        'catTongue' => 'A guest with a fan on their ticket can\'t take anything hot. A dish you just picked up steams; one wisp fades with every step you take.',
+        'shared' => 'A shared table takes two dishes at once. Stack them so the dish at the top of the ticket is on top, with the other right under it.',
+        'cart' => 'Walk into a cart and it rolls until something stops it (you stay where you are). A cart carrying a dish serves it to a guest waiting for that dish.',
         _ => '',
       };
   @override
@@ -440,10 +461,15 @@ class StringsEn extends Strings {
     final head = s.stack.isEmpty ? 'nothing' : s.stack.reversed.map(dishName).join(', ');
     final waiting = [
       for (var i = 0; i < s.board.guests.length; i++)
-        if (!s.isServed(i)) dishName(s.board.guests[i].wants),
+        if (!s.isServed(i)) _order(s.board.guests[i]),
     ];
     return 'Board. On your head, top first: $head. Orders still waiting: ${waiting.isEmpty ? 'none' : waiting.join(', ')}.';
   }
+
+  String _order(Guest g) => [
+        g.shared ? '${dishName(g.wants[0])} on top of ${dishName(g.wants[1])} (shared table)' : dishName(g.wants),
+        if (g.catTongue) ' (cooled)',
+      ].join();
 
   @override
   String get keyboardHelp => 'Arrows/WASD move, Z undo, Y redo, R restart, H hint';

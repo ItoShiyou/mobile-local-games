@@ -39,6 +39,7 @@ class Level {
     required this.par,
     required this.map,
     this.cap = 2,
+    this.orders = const [],
   });
 
   /// Stable id used for saved progress. Never change it after release.
@@ -47,6 +48,9 @@ class Level {
   final int par;
   final List<String> map;
   final int cap;
+
+  /// What each shared table (`W`) wants, top dish first.
+  final List<String> orders;
 
   late final Chapter _chapter;
   late final int _number;
@@ -62,12 +66,15 @@ class Level {
 
   String name(String lang) => lang == 'ja' ? ja : en;
 
-  late final Board board = Board.parse(map, capacity: cap);
+  late final Board board = Board.parse(map, capacity: cap, orders: orders);
 
   late final List<String> gimmicks = [
     if (map.any((r) => r.contains('T'))) 'counter',
     if (map.any((r) => r.contains('s'))) 'tray',
     if (map.any((r) => r.contains(RegExp(r'[<>^v]')))) 'oneWay',
+    if (map.any((r) => r.contains(RegExp('[E-H]')))) 'catTongue',
+    if (map.any((r) => r.contains('W'))) 'shared',
+    if (map.any((r) => r.contains(RegExp('[=w-z]')))) 'cart',
   ];
 }
 

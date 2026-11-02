@@ -8,15 +8,27 @@ import 'solver.dart';
 enum Gimmick {
   counter('T', {'T': '#'}),
   tray('s', {'s': '.'}),
-  oneWay('<>^v', {'<': '.', '>': '.', '^': '.', 'v': '.'});
+  oneWay('<>^v', {'<': '.', '>': '.', '^': '.', 'v': '.'}),
+  catTongue('EFGH', {'E': 'A', 'F': 'B', 'G': 'C', 'H': 'D'}),
+  // a shared table becomes a guest who only wants the top dish
+  shared('W', {}),
+  // carts go, a loaded cart leaves its dish on the floor
+  cart('=wxyz', {'=': '.', 'w': 'a', 'x': 'b', 'y': 'c', 'z': 'd'});
 
   const Gimmick(this.chars, this.neutral);
   final String chars;
   final Map<String, String> neutral;
 
-  List<String> neutralize(List<String> map) => [
-        for (final row in map) row.split('').map((c) => neutral[c] ?? c).join(),
-      ];
+  List<String> neutralize(List<String> map, {List<String> orders = const []}) {
+    var table = 0;
+    return [
+      for (final row in map)
+        row.split('').map((c) {
+          if (this == Gimmick.shared && c == 'W') return orders[table++][0].toUpperCase();
+          return neutral[c] ?? c;
+        }).join(),
+    ];
+  }
 }
 
 class StageAnalysis {
@@ -41,8 +53,8 @@ class StageAnalysis {
   double get trapRatio => reachable == 0 ? 0 : deadEnds / reachable;
 }
 
-StageAnalysis analyze(List<String> map, int capacity, {int maxStates = 200000}) {
-  final board = Board.parse(map, capacity: capacity);
+StageAnalysis analyze(List<String> map, int capacity, {List<String> orders = const [], int maxStates = 200000}) {
+  final board = Board.parse(map, capacity: capacity, orders: orders);
   final start = board.initialState();
   final solution = Solver(maxStates: maxStates).solve(start);
 
@@ -109,25 +121,32 @@ StageAnalysis analyze(List<String> map, int capacity, {int maxStates = 200000}) 
 /// True when [g] changes how the stage is solved.
 ///
 /// Counters and trays give the player new abilities, so they are essential
-/// when the stage cannot be solved without them. One-way floors only take
-/// options away, so they are essential when removing them would make the
-/// shortest solution at least [oneWayMargin] moves shorter.
-bool isEssential(List<String> map, int capacity, Gimmick g, {int oneWayMargin = 4}) {
-  final plain = g.neutralize(map);
-  final board = Board.parse(plain, capacity: capacity);
+/// when the stage cannot be solved without them. One-way floors, cat
+/// tongues and shared tables only take options away, so they are essential
+/// when removing them would make the shortest solution at least
+/// [oneWayMargin] moves shorter. Carts do both (they block the way and
+/// deliver): essential when the stage needs them or the length changes by
+/// [oneWayMargin] either way.
+bool isEssential(List<String> map, int capacity, Gimmick g, {List<String> orders = const [], int oneWayMargin = 4}) {
+  final plain = g.neutralize(map, orders: orders);
+  final board = Board.parse(plain, capacity: capacity, orders: g == Gimmick.shared ? const [] : orders);
   final without = Solver(maxStates: 200000).solve(board.initialState());
   if (without == null) return true;
-  if (g != Gimmick.oneWay) return false;
-  final with_ = Solver(maxStates: 200000).solve(Board.parse(map, capacity: capacity).initialState());
-  return with_ != null && with_.length - without.length >= oneWayMargin;
+  if (g == Gimmick.counter || g == Gimmick.tray) return false;
+  final with_ = Solver(maxStates: 200000).solve(Board.parse(map, capacity: capacity, orders: orders).initialState());
+  if (with_ == null) return false;
+  final diff = with_.length - without.length;
+  return g == Gimmick.cart ? diff.abs() >= oneWayMargin : diff >= oneWayMargin;
 }
 
 /// True when removing [g] changes the length of the shortest solution (or
 /// makes the stage unsolvable): the gimmick is part of the intended route,
 /// as a shortcut, an obstacle or a necessity.
-bool gimmickMatters(List<String> map, int capacity, Gimmick g) {
-  final plain = Solver(maxStates: 200000).solve(Board.parse(g.neutralize(map), capacity: capacity).initialState());
+bool gimmickMatters(List<String> map, int capacity, Gimmick g, {List<String> orders = const []}) {
+  final plainMap = g.neutralize(map, orders: orders);
+  final plain = Solver(maxStates: 200000)
+      .solve(Board.parse(plainMap, capacity: capacity, orders: g == Gimmick.shared ? const [] : orders).initialState());
   if (plain == null) return true;
-  final real = Solver(maxStates: 200000).solve(Board.parse(map, capacity: capacity).initialState());
+  final real = Solver(maxStates: 200000).solve(Board.parse(map, capacity: capacity, orders: orders).initialState());
   return real != null && real.length != plain.length;
 }

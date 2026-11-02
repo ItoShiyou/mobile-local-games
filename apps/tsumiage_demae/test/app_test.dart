@@ -86,7 +86,7 @@ void main() {
       await boot(
         tester,
         prefs: {
-          'progress.intro.v1': <String>['howto', 'counter', 'tray', 'oneWay'],
+          'progress.intro.v1': <String>['howto', 'counter', 'tray', 'oneWay', 'catTongue', 'shared', 'cart'],
         },
       );
       await tester.binding.setSurfaceSize(size);
@@ -109,7 +109,7 @@ void main() {
         await boot(
           tester,
           prefs: {
-            'progress.intro.v1': <String>['howto', 'counter', 'tray', 'oneWay'],
+            'progress.intro.v1': <String>['howto', 'counter', 'tray', 'oneWay', 'catTongue', 'shared', 'cart'],
             'settings.language': lang,
           },
         );

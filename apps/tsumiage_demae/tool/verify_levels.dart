@@ -7,11 +7,12 @@ import 'package:tsumiage_demae/game/solver.dart';
 
 void main() {
   for (final l in allLevels) {
-    final a = analyze(l.map, l.cap);
+    final a = analyze(l.map, l.cap, orders: l.orders);
     final parts = <String>[];
     for (final g in l.gimmicks) {
-      final plain = Gimmick.values.byName(g).neutralize(l.map);
-      final sol = Solver().solve(Board.parse(plain, capacity: l.cap).initialState());
+      final gm = Gimmick.values.byName(g);
+      final plain = gm.neutralize(l.map, orders: l.orders);
+      final sol = Solver().solve(Board.parse(plain, capacity: l.cap, orders: gm == Gimmick.shared ? const [] : l.orders).initialState());
       parts.add('$g→${sol?.length ?? 'X'}');
     }
     final unused = <String>[];

@@ -15,7 +15,7 @@ void main() {
     }
     expect(allLevels.last.next, isNull);
     final intro = allLevels.where((l) => l.introduces != null).map((l) => l.introduces).toList();
-    expect(intro, ['counter', 'tray', 'oneWay']);
+    expect(intro, ['counter', 'tray', 'oneWay', 'catTongue', 'shared', 'cart']);
   });
 
   for (final level in allLevels) {
@@ -35,17 +35,17 @@ void main() {
         expect(level.board.width, lessThanOrEqualTo(8));
         expect(level.board.height, lessThanOrEqualTo(8));
         expect(level.cap, inInclusiveRange(2, 3));
-        expect(analyze(level.map, level.cap).unusedFloor, 0);
+        expect(analyze(level.map, level.cap, orders: level.orders).unusedFloor, 0);
       });
 
       for (final g in level.gimmicks) {
         test('uses its $g', () {
-          expect(gimmickMatters(level.map, level.cap, Gimmick.values.byName(g)), isTrue);
+          expect(gimmickMatters(level.map, level.cap, Gimmick.values.byName(g), orders: level.orders), isTrue);
         });
       }
       if (level.introduces != null) {
         test('cannot be solved without the gimmick it introduces', () {
-          expect(isEssential(level.map, level.cap, Gimmick.values.byName(level.introduces!), oneWayMargin: 1), isTrue);
+          expect(isEssential(level.map, level.cap, Gimmick.values.byName(level.introduces!), orders: level.orders, oneWayMargin: 1), isTrue);
         });
       }
     });

@@ -110,7 +110,13 @@ class _GameScreenState extends State<GameScreen> {
       return;
     }
     final ev = r.events;
-    if (ev.any((e) => e is Served)) {
+    if (ev.any((e) => e is Pushed)) {
+      scope.sound.play(Sfx.flip);
+      if (ev.any((e) => e is Pushed && e.served != null)) {
+        Future.delayed(const Duration(milliseconds: 300), () => scope.sound.play(Sfx.serve));
+      }
+      if (haptic) HapticFeedback.lightImpact();
+    } else if (ev.any((e) => e is Served)) {
       scope.sound.play(Sfx.serve);
       if (haptic) HapticFeedback.lightImpact();
     } else if (ev.any((e) => e is Returned)) {
@@ -563,7 +569,7 @@ class _TopBand extends StatelessWidget {
                           for (var i = 0; i < g.length; i++)
                             Padding(
                               padding: const EdgeInsets.only(right: 4),
-                              child: OrderSlip(kind: g[i].wants, served: state.isServed(i), stamp: s.servedStamp, index: i),
+                              child: OrderSlip(kind: g[i].wants, served: state.isServed(i), stamp: s.servedStamp, index: i, cool: g[i].catTongue),
                             ),
                         ],
                       ),

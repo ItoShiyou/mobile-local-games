@@ -560,8 +560,47 @@ class Art {
     }
   }
 
-  /// The order ticket hanging above a guest.
-  static void orderTicket(Canvas canvas, Offset center, double u, String kind, {double scale = 1, bool upset = false, double tilt = -.08}) {
+  /// Steam over a hot dish on the stack: one wisp per step it still needs
+  /// to cool. Ink strokes, not a soft blur, so it reads at a glance.
+  static void dishSteam(Canvas canvas, Offset c, double u, int heat, double t) {
+    final w = math.max(1.0, u * .022);
+    for (var i = 0; i < heat; i++) {
+      final x = c.dx + (i - (heat - 1) / 2) * u * .12;
+      final sway = math.sin(t * 3 + i * 1.7) * u * .025;
+      final path = Path()
+        ..moveTo(x, c.dy)
+        ..quadraticBezierTo(x - u * .05 + sway, c.dy - u * .07, x + sway * .5, c.dy - u * .13)
+        ..quadraticBezierTo(x + u * .05 + sway, c.dy - u * .19, x + sway, c.dy - u * .25);
+      canvas.drawPath(path, stroke(kInk.withValues(alpha: .55), w));
+    }
+  }
+
+  /// A round paper fan (uchiwa) with indigo waves: "cool it down first".
+  static void coolFan(Canvas canvas, Offset c, double u) {
+    final w = u * .02;
+    canvas.drawLine(c + Offset(u * .02, u * .05), c + Offset(u * .07, u * .14), stroke(const Color(0xFF8A5A33), w * 1.6));
+    final face = Path()..addOval(Rect.fromCircle(center: c, radius: u * .075));
+    inked(canvas, face, const Color(0xFFF2EBDA), w);
+    for (var k = 0; k < 2; k++) {
+      final y = c.dy - u * .02 + k * u * .035;
+      canvas.drawPath(
+          Path()
+            ..moveTo(c.dx - u * .055, y)
+            ..quadraticBezierTo(c.dx - u * .025, y - u * .025, c.dx, y)
+            ..quadraticBezierTo(c.dx + u * .025, y + u * .025, c.dx + u * .055, y),
+          stroke(const Color(0xFF3F5F86), w * .9));
+    }
+  }
+
+  /// The order ticket hanging above a guest. [kind] is one dish, or two for
+  /// a shared table (top dish first, drawn above the one under it). [cool]
+  /// adds the fan of a cat-tongued guest.
+  static void orderTicket(Canvas canvas, Offset center, double u, String kind,
+      {double scale = 1, bool upset = false, double tilt = -.08, bool cool = false}) {
+    if (kind.length == 2) {
+      _pairTicket(canvas, center, u, kind, scale: scale, upset: upset, tilt: tilt);
+      return;
+    }
     final w = u * .028;
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -588,7 +627,74 @@ class Art {
     canvas.drawLine(Offset(-u * .15, -u * .12), Offset(u * .16, -u * .12), stroke(const Color(0xB3C8452F), w * .8));
     if (upset) canvas.drawPath(both, stroke(const Color(0xFFC8452F), w * 1.4));
     food(canvas, Offset(0, u * .0), u * .25, kind);
+    if (cool) coolFan(canvas, Offset(u * .19, u * .1), u * 1.3);
     canvas.restore();
+  }
+
+  /// A taller slip for a shared table: the top dish over the one under it,
+  /// joined by a little bracket, as they must sit on the cat's head.
+  static void _pairTicket(Canvas canvas, Offset center, double u, String kinds, {double scale = 1, bool upset = false, double tilt = -.08}) {
+    final w = u * .028;
+    canvas.save();
+    canvas.translate(center.dx, center.dy + u * .04);
+    canvas.rotate(tilt);
+    canvas.scale(scale);
+    final slip = Path()
+      ..moveTo(-u * .19, -u * .3)
+      ..lineTo(u * .2, -u * .295)
+      ..lineTo(u * .195, u * .2)
+      ..lineTo(u * .06, u * .23)
+      ..lineTo(-u * .05, u * .2)
+      ..lineTo(-u * .19, u * .225)
+      ..close();
+    canvas.drawPath(slip.shift(Offset(u * .02, u * .03)), fill(const Color(0x30200C04)));
+    inked(canvas, slip, const Color(0xFFFFF9EC), upset ? w * 1.6 : w);
+    canvas.drawLine(Offset(-u * .15, -u * .25), Offset(u * .16, -u * .25), stroke(const Color(0xB3C8452F), w * .8));
+    if (upset) canvas.drawPath(slip, stroke(const Color(0xFFC8452F), w * 1.4));
+    food(canvas, Offset(u * .02, -u * .12), u * .2, kinds[0]);
+    food(canvas, Offset(u * .02, u * .09), u * .2, kinds[1]);
+    // a bracket on the left: these two go together, top over bottom
+    canvas.drawPath(
+        Path()
+          ..moveTo(-u * .1, -u * .16)
+          ..lineTo(-u * .14, -u * .16)
+          ..lineTo(-u * .14, u * .13)
+          ..lineTo(-u * .1, u * .13),
+        stroke(const Color(0xFFC8452F), w));
+    canvas.restore();
+  }
+
+  /// A wooden market cart seen from above at a slant: plank bed, two iron
+  /// wheels, a handle bar. [load] is the dish riding on it.
+  static void cart(Canvas canvas, Offset c, double u, String? load, {double tilt = 0}) {
+    final w = u * .03;
+    shadow(canvas, c + Offset(0, u * .3), u * .82, u * .2, .2);
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.rotate(tilt);
+    for (final sx in [-1.0, 1.0]) {
+      final wheel = Path()..addOval(Rect.fromCenter(center: Offset(sx * u * .3, u * .22), width: u * .16, height: u * .2));
+      inked(canvas, wheel, const Color(0xFF4A3A30), w);
+      canvas.drawCircle(Offset(sx * u * .3, u * .22), u * .025, fill(const Color(0xFFB9A88E)));
+    }
+    final bed = Path()
+      ..moveTo(-u * .36, -u * .2)
+      ..lineTo(u * .37, -u * .21)
+      ..lineTo(u * .35, u * .2)
+      ..lineTo(-u * .35, u * .21)
+      ..close();
+    inked(canvas, bed, const Color(0xFFC79A62), w);
+    for (var k = 1; k < 3; k++) {
+      final y = -u * .2 + k * u * .135;
+      canvas.drawLine(Offset(-u * .34, y), Offset(u * .34, y - u * .005), stroke(const Color(0xFF8C6236), w * .8));
+    }
+    nick(canvas, Offset(-u * .2, -u * .14), u * .14, w * .8, angle: 0);
+    // handle bar at the back
+    canvas.drawLine(Offset(-u * .2, -u * .2), Offset(-u * .24, -u * .36), stroke(kInk, w * 1.3));
+    canvas.drawLine(Offset(u * .2, -u * .21), Offset(u * .24, -u * .36), stroke(kInk, w * 1.3));
+    canvas.drawLine(Offset(-u * .28, -u * .36), Offset(u * .28, -u * .36), stroke(const Color(0xFF7A5232), w * 2.2));
+    canvas.restore();
+    if (load != null) floorDish(canvas, c + Offset(0, -u * .03), u * .82, load);
   }
 
   // ------------------------------------------------------------- props
