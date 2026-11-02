@@ -43,10 +43,16 @@ class PluginSound implements Sound {
   Future<void> _init() async {
     try {
       // Mix with other apps and respect the iOS silent switch.
-      await AudioPlayer.global.setAudioContext(AudioContextConfig(
-        focus: AudioContextConfigFocus.mixWithOthers,
-        respectSilence: true,
-      ).build());
+      // iOS rejects respectSilence + mixWithOthers together, so use the
+      // ambient category, which does both by itself.
+      await AudioPlayer.global.setAudioContext(AudioContext(
+        iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
+        android: const AudioContextAndroid(
+          contentType: AndroidContentType.sonification,
+          usageType: AndroidUsageType.game,
+          audioFocus: AndroidAudioFocus.none,
+        ),
+      ));
       for (final s in Sfx.values) {
         final players = <AudioPlayer>[];
         for (var i = 0; i < _voices; i++) {
