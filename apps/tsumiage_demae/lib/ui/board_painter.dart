@@ -51,6 +51,7 @@ Duration transitionDuration(Transition t) {
   final pick = t.events.any((e) => e is PickedUp);
   if (flip && pick) return const Duration(milliseconds: 480);
   if (flip) return const Duration(milliseconds: 400);
+  if (t.events.any((e) => e is Pushed && e.served != null)) return const Duration(milliseconds: 560);
   if (t.events.any((e) => e is Pushed)) return const Duration(milliseconds: 380);
   if (t.events.any((e) => e is Served || e is Returned)) return const Duration(milliseconds: 340);
   if (pick) return const Duration(milliseconds: 250);
@@ -652,7 +653,7 @@ class BoardPainter {
       if (pushed?.cartIndex == i && tr != null && p < 1 && !tr.isUndo) {
         final from = Offset((pushed!.from.x + .5) * u, (pushed.from.y + .5) * u);
         c = Offset.lerp(from, c, Curves.easeOutCubic.transform(_seg(p, .15, .8)))!;
-        if (pushed.served != null && p < .85) load = board.carts[i].load;
+        if (pushed.served != null && p < .78) load = board.carts[i].load;
       }
       var tilt = 0.0;
       if (bump != null && bump.reason == Blocked.cartStuck && f.bumpP < 1 &&
@@ -685,7 +686,7 @@ class BoardPainter {
     void drawGuest(int i) {
       final g = board.guests[i];
       final o = Offset(g.pos.x * u, g.pos.y * u);
-      final beingServed = (served?.guestIndex == i || pushed?.served == i) && p < .72;
+      final beingServed = (served?.guestIndex == i && p < .72) || (pushed?.served == i && p < .97);
       final done = s.isServed(i) && !beingServed;
       final wrong = bump != null && bump.reason == Blocked.wrongDish && f.bumpAge < 1.1 &&
           s.pos.x + bump.dir.dx == g.pos.x && s.pos.y + bump.dir.dy == g.pos.y;
@@ -816,6 +817,17 @@ class BoardPainter {
         Art.stackDish(canvas, Offset.lerp(from, to, q)! + arc, du, picked.color);
       } else if (picked != null && !flipped && p >= pickB) {
         Art.stackDish(canvas, slot(tr.from.stack.length), du, picked.color);
+      }
+      // a cart that reached its guest: the dish hops from the cart to the table
+      if (pushed?.served != null && p >= .78) {
+        final q = Curves.easeOut.transform(_seg(p, .78, 1));
+        final cp = tr.to.carts[pushed!.cartIndex];
+        final g = board.guests[pushed.served!];
+        final from = Offset((cp.x + .5) * u, (cp.y + .47) * u);
+        final to = Offset((g.pos.x + .5) * u, (g.pos.y + .66) * u);
+        if (q < 1) {
+          Art.stackDish(canvas, Offset.lerp(from, to, q)! + Offset(0, -math.sin(q * math.pi) * u * .25), du, board.carts[pushed.cartIndex].load!);
+        }
       }
       final flyer = served ?? returned;
       if (flyer != null) {

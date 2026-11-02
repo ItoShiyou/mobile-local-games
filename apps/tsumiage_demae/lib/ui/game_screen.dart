@@ -113,7 +113,7 @@ class _GameScreenState extends State<GameScreen> {
     if (ev.any((e) => e is Pushed)) {
       scope.sound.play(Sfx.flip);
       if (ev.any((e) => e is Pushed && e.served != null)) {
-        Future.delayed(const Duration(milliseconds: 300), () => scope.sound.play(Sfx.serve));
+        Future.delayed(const Duration(milliseconds: 500), () => scope.sound.play(Sfx.serve));
       }
       if (haptic) HapticFeedback.lightImpact();
     } else if (ev.any((e) => e is Served)) {
