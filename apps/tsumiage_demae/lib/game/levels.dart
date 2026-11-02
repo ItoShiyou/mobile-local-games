@@ -637,13 +637,12 @@ final List<Chapter> chapters = [
         '#.WCy.#',
         '#######',
       ]),
-      Level(id: 'k08', ja: '朝市の大団円', en: 'Market Finale', par: 16, cap: 3, map: [
+      Level(id: 'k08', ja: '朝市の大団円', en: 'Market Finale', par: 22, cap: 3, map: [
         '########',
-        '#.B.#.A#',
-        '#...Ba.#',
-        '#.x.=T.#',
-        '#....as#',
-        '#.#=P.b#',
+        '#..P.bB#',
+        '#cB.#=s#',
+        '#..T...#',
+        '#=.b.Bb#',
         '########',
       ]),
     ],

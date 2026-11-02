@@ -42,6 +42,9 @@ class GameController extends ChangeNotifier {
   final Board board;
   final Solver _solver = Solver();
 
+  /// Positions already known to be dead ends (see [Solver.solve]).
+  final Set<String> _dead = {};
+
   late List<GameState> _history;
   int _cursor = 0;
   int _serial = 0;
@@ -120,7 +123,7 @@ class GameController extends ChangeNotifier {
   /// Shows the first move of a shortest solution from here.
   Dir? showHint() {
     if (isWon) return null;
-    final path = _solver.solve(state);
+    final path = _solver.solve(state, dead: _dead);
     _hint = (path == null || path.isEmpty) ? null : path.first;
     _stuck = path == null;
     if (_stuck) _noticed = true;
@@ -136,7 +139,7 @@ class GameController extends ChangeNotifier {
     if (isWon) {
       _stuck = false;
     } else {
-      final path = _solver.solve(state);
+      final path = _solver.solve(state, dead: _dead);
       _stuck = path == null;
       if (followHint && path != null && path.isNotEmpty) _hint = path.first;
     }

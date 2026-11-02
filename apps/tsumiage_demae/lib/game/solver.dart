@@ -12,8 +12,13 @@ class Solver {
 
   /// Shortest winning move sequence from [start], or null if none exists
   /// (or the search budget is exhausted).
-  List<Dir>? solve(GameState start) {
+  ///
+  /// [dead] remembers positions known to be dead ends: when a search finds
+  /// no win, everything it reached is a dead end too, so it is added there
+  /// and later searches into that region return at once.
+  List<Dir>? solve(GameState start, {Set<String>? dead}) {
     if (start.isWon) return const [];
+    if (dead != null && dead.contains(start.key)) return null;
     final parent = <String, (String, Dir)>{};
     final seen = <String>{start.key};
     final queue = Queue<GameState>()..add(start);
@@ -28,9 +33,11 @@ class Solver {
         parent[k] = (s.key, d);
         if (n.isWon) return _path(parent, start.key, k);
         if (seen.length > maxStates) return null;
+        if (dead != null && dead.contains(k)) continue;
         queue.add(n);
       }
     }
+    dead?.addAll(seen);
     return null;
   }
 

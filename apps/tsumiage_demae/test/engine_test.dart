@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiage_demae/game/controller.dart';
 import 'package:tsumiage_demae/game/engine.dart';
 import 'package:tsumiage_demae/game/levels.dart';
+import 'package:tsumiage_demae/game/solver.dart';
 
 GameState play(GameState s, List<Dir> moves) {
   for (final d in moves) {
@@ -183,6 +184,21 @@ void main() {
       final s = play(b.initialState(), [r, r]);
       expect(s.pos, const Pos(2, 1));
     });
+  });
+
+  test('a dead-end search remembers every position it reached', () {
+    // b on top of a: guest A can never be served
+    final b = Board.parse(['#######', '#Pab.A#', '#.....#', '#######']);
+    final stuck = play(b.initialState(), [r, r]);
+    final dead = <String>{};
+    expect(Solver().solve(stuck, dead: dead), isNull);
+    expect(dead, contains(stuck.key));
+    final further = play(stuck, [d, r]);
+    expect(dead, contains(further.key));
+    expect(Solver().solve(further, dead: dead), isNull);
+    // a live position is still solved, and never marked
+    expect(Solver().solve(b.initialState(), dead: dead), isNotNull);
+    expect(dead, isNot(contains(b.initialState().key)));
   });
 
   group('GameController', () {

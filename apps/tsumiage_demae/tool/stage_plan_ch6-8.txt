@@ -1,5 +1,9 @@
 # Generator options for chapters 6-8 (one stage per line; the first
-# candidate printed was taken).
+# candidate printed was taken), with these exceptions:
+# - k01-k03: run with --keep=400 --seed=31, then the candidate with a loaded
+#   cart (w-z) and the fewest dead ends was taken (none have any).
+# - k08: the second candidate (half the positions of the first, so the
+#   dead-end search stays quick on phones, and a longer finale).
 #   dart run tool/gen_levels.dart <options> --keep=6
 # n05, n06 and k08 needed --soft: with the new rules, a return counter or
 # tray that is strictly required was too rare, so they only have to matter.
