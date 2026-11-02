@@ -47,8 +47,9 @@ const shots = [
     ja: '8つのお店で全70品', en: '70 orders\nin eight places' },
   { name: '05', progress: 'b01', open: 'b01', keys: ['ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight'], wait: 2200,
     ja: '目標の手数で届けて\n判子を集めよう', en: 'Deliver within par,\ncollect the stamps' },
-  { name: '06', progress: 't05', open: 't05', keys: ['ArrowUp'], wait: 900, dark: true,
-    ja: '夜営業は提灯の灯りで', en: 'Evening service,\nby lantern light' },
+  // a fresh dish still steaming next to the cat-tongued guest
+  { name: '06', progress: 'n03', open: 'n03', keys: ['ArrowUp', 'ArrowUp', 'ArrowLeft', 'ArrowUp'], wait: 700,
+    ja: 'ねこ舌のお客さんには\n冷ましてから', en: 'Let it cool for\nthe cat-tongued guest' },
 ];
 
 async function capture(browser, dev, lang, shot) {

@@ -563,15 +563,17 @@ class Art {
   /// Steam over a hot dish on the stack: one wisp per step it still needs
   /// to cool. Ink strokes, not a soft blur, so it reads at a glance.
   static void dishSteam(Canvas canvas, Offset c, double u, int heat, double t) {
-    final w = math.max(1.0, u * .022);
+    final w = math.max(1.6, u * .038);
     for (var i = 0; i < heat; i++) {
-      final x = c.dx + (i - (heat - 1) / 2) * u * .12;
-      final sway = math.sin(t * 3 + i * 1.7) * u * .025;
+      final x = c.dx + (i - (heat - 1) / 2) * u * .14;
+      final sway = math.sin(t * 3 + i * 1.7) * u * .03;
       final path = Path()
         ..moveTo(x, c.dy)
-        ..quadraticBezierTo(x - u * .05 + sway, c.dy - u * .07, x + sway * .5, c.dy - u * .13)
-        ..quadraticBezierTo(x + u * .05 + sway, c.dy - u * .19, x + sway, c.dy - u * .25);
-      canvas.drawPath(path, stroke(kInk.withValues(alpha: .55), w));
+        ..quadraticBezierTo(x - u * .06 + sway, c.dy - u * .09, x + sway * .5, c.dy - u * .16)
+        ..quadraticBezierTo(x + u * .06 + sway, c.dy - u * .23, x + sway, c.dy - u * .31);
+      // a pale halo under the ink line keeps it readable on any floor
+      canvas.drawPath(path, stroke(const Color(0xCCFFF8EA), w * 2.2));
+      canvas.drawPath(path, stroke(kInk.withValues(alpha: .8), w));
     }
   }
 
