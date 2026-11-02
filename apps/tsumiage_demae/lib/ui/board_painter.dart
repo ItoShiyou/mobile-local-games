@@ -95,14 +95,7 @@ class SceneLayers {
     final lc = Canvas(lr);
     if (night) {
       for (final (o, r) in lightsAt) {
-        final rect = Rect.fromCircle(center: o, radius: r);
-        lc.drawCircle(
-          o,
-          r,
-          Paint()
-            ..blendMode = BlendMode.screen
-            ..shader = RadialGradient(colors: [pal.glow.withValues(alpha: .4), pal.glow.withValues(alpha: 0)]).createShader(rect),
-        );
+        Art.lightPool(lc, o, r * .8, pal.glow, .34, rough: true);
       }
     }
     return SceneLayers._(base, lr.endRecording(), keyFor(b, u, sc, night));
@@ -145,18 +138,29 @@ class SceneLayers {
           c.drawLine(Offset(0, r * h), Offset(all.width, r * h), line);
         }
       case FloorKind.tiles:
+        // old terrazzo-and-clay tiles: each fired a little differently,
+        // a few replaced with odd ones over the years, grout drawn by hand
         final t = u / 2;
         for (var j = 0; j * t < all.height; j++) {
           for (var i = 0; i * t < all.width; i++) {
             final r = Rect.fromLTWH(i * t, j * t, t, t);
-            c.drawRect(r, Art.fill((i + j).isEven ? sc.floorA : sc.floorB));
+            final hh = _hash(i, j, 13);
+            var col = (i + j).isEven ? sc.floorA : sc.floorB;
+            col = Color.lerp(col, (hh & 1) == 0 ? Colors.white : sc.floorLine, (hh % 4) * .04)!;
+            if (hh % 23 == 0) col = Color.lerp(sc.floorB, const Color(0xFF8FA89A), .45)!;
+            c.drawRect(r, Art.fill(col));
+            if (hh % 17 == 0) {
+              // a chipped corner
+              c.drawPath(Path()..moveTo(r.right - t * .28, r.top)..lineTo(r.right, r.top)..lineTo(r.right, r.top + t * .2)..close(), Art.fill(sc.floorLine.withValues(alpha: .5)));
+            }
           }
         }
+        final grout = Art.stroke(sc.floorLine, u * .015);
         for (var j = 0; j * t <= all.height; j++) {
-          c.drawLine(Offset(0, j * t), Offset(all.width, j * t), Art.stroke(sc.floorLine, u * .015));
+          c.drawPath(Wob.line(Offset(0, j * t), Offset(all.width, j * t), seed: j * 3 + 1, amp: u * .006), grout);
         }
         for (var i = 0; i * t <= all.width; i++) {
-          c.drawLine(Offset(i * t, 0), Offset(i * t, all.height), Art.stroke(sc.floorLine, u * .015));
+          c.drawPath(Wob.line(Offset(i * t, 0), Offset(i * t, all.height), seed: i * 5 + 2, amp: u * .006), grout);
         }
       case FloorKind.parquet:
         final t = u / 2;
@@ -172,12 +176,16 @@ class SceneLayers {
         }
       case FloorKind.stones:
         c.drawRect(all, Art.fill(sc.floorLine.withValues(alpha: .55)));
+        // cobbles laid by hand: rows of stones of different lengths
         for (var j = 0; j < b.height * 2; j++) {
-          final off = j.isOdd ? u * .25 : 0.0;
-          for (var i = -1; i < b.width * 2; i++) {
-            final r = Rect.fromLTWH(i * u / 2 + off + u * .025, j * u / 2 + u * .025, u / 2 - u * .05, u / 2 - u * .05);
-            final tone = Color.lerp(sc.floorA, sc.floorB, (_hash(i, j, 2) % 4) / 3)!;
-            c.drawPath(Wob.rrect(r, u * .08, seed: _hash(i, j), amp: u * .01), Art.fill(tone));
+          var x = -u * ((_hash(j, 3) % 50) / 100);
+          for (var i = 0; x < all.width; i++) {
+            final hh = _hash(i, j, 2);
+            final sw = u * (.34 + (hh % 5) * .07);
+            final r = Rect.fromLTWH(x + u * .025, j * u / 2 + u * .025 + (hh % 3 - 1) * u * .008, sw - u * .05, u / 2 - u * .05);
+            final tone = Color.lerp(sc.floorA, sc.floorB, (hh % 4) / 3)!;
+            c.drawPath(Wob.rrect(r, u * (.04 + (hh % 4) * .03), seed: hh, amp: u * .012), Art.fill(tone));
+            x += sw;
           }
         }
       case FloorKind.earth:
@@ -201,55 +209,45 @@ class SceneLayers {
     final all = Rect.fromLTWH(0, 0, b.width * u, b.height * u);
     c.save();
     c.clipPath(floor);
-    // the whole room a touch warmer and brighter near the windows
-    c.drawRect(
-        all,
-        Paint()
-          ..blendMode = BlendMode.screen
-          ..shader = const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0x40FFF1CC), Color(0x14FFF1CC), Color(0x00FFF1CC)],
-          ).createShader(all));
-    // slanted window panes of light
+    // slanted window panes of light, cut with hard edges like a stencil,
+    // each split by the window's cross bar; spaced unevenly
     final pane = Paint()
       ..blendMode = BlendMode.screen
-      ..color = const Color(0x38FFF6DC)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, u * .12);
+      ..color = const Color(0x2EFFF3D2);
     final slope = u * .7;
-    for (var k = 0; k * u * 2.6 < all.width + all.height; k++) {
-      final x0 = u * .8 + k * u * 2.6;
-      final path = Path()
-        ..moveTo(x0, 0)
-        ..lineTo(x0 + u * 1.1, 0)
-        ..lineTo(x0 + u * 1.1 - all.height / u * slope, all.height)
-        ..lineTo(x0 - all.height / u * slope, all.height)
-        ..close();
-      c.drawPath(path, pane);
+    var x0 = u * .6;
+    for (var k = 0; x0 - all.height / u * slope < all.width; k++) {
+      final wpane = u * (.5 + (_hash(k, 4) % 3) * .08);
+      for (final off in [0.0, wpane + u * .1]) {
+        final a = x0 + off;
+        c.drawPath(
+            Path()
+              ..moveTo(a, 0)
+              ..lineTo(a + wpane, 0)
+              ..lineTo(a + wpane - all.height / u * slope, all.height)
+              ..lineTo(a - all.height / u * slope, all.height)
+              ..close(),
+            pane);
+      }
+      x0 += u * (2.4 + (_hash(k, 8) % 3) * .5);
     }
     c.restore();
   }
 
   static void _paintShadows(Canvas c, Board b, double u) {
+    final shade = Art.fill(const Color(0x1E3A1C10));
     for (var y = 0; y < b.height; y++) {
       for (var x = 0; x < b.width; x++) {
         if (_isWall(b, x, y)) continue;
+        // cast shadows in two flat steps (a printed tone, not an airbrush);
+        // the light comes from the upper left, so only walls above and to
+        // the left throw a shadow onto the floor
         if (_isWall(b, x, y - 1)) {
-          final r = Rect.fromLTWH(x * u, y * u, u, u * .32);
-          c.drawRect(r, Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x2C281810), Color(0x00281810)]).createShader(r));
+          c.drawRect(Rect.fromLTWH(x * u, y * u, u + .5, u * .2), shade);
+          c.drawRect(Rect.fromLTWH(x * u, y * u, u + .5, u * .09), shade);
         }
-        for (final sx in [-1, 1]) {
-          if (_isWall(b, x + sx, y)) {
-            final r = Rect.fromLTWH(sx < 0 ? x * u : x * u + u * .84, y * u, u * .16, u);
-            c.drawRect(
-                r,
-                Paint()
-                  ..shader = LinearGradient(
-                    begin: sx < 0 ? Alignment.centerLeft : Alignment.centerRight,
-                    end: sx < 0 ? Alignment.centerRight : Alignment.centerLeft,
-                    colors: const [Color(0x1C281810), Color(0x00281810)],
-                  ).createShader(r));
-          }
+        if (_isWall(b, x - 1, y)) {
+          c.drawRect(Rect.fromLTWH(x * u, y * u, u * .14, u + .5), shade);
         }
       }
     }
@@ -399,9 +397,8 @@ class SceneLayers {
         if (!_isRing(b, x, y)) room.addRect(Rect.fromLTWH(x * u, y * u, u, u));
       }
     }
-    c.drawPath(room.shift(Offset(0, u * .18)), Paint()
-      ..color = const Color(0x40201008)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, u * .3));
+    // the room's shadow on the wall behind: one flat, offset shape
+    c.drawPath(room.shift(Offset(u * .12, u * .16)), Paint()..color = const Color(0x38301408));
   }
 
   static void _wallTop(Canvas c, Rect r, double u, Scene sc) {
@@ -410,8 +407,14 @@ class SceneLayers {
       case WallKind.plaster:
       case WallKind.tiles:
       case WallKind.brick:
-        c.drawLine(r.topLeft + Offset(0, r.height * .5), r.topRight + Offset(0, r.height * .5),
-            Art.stroke(Color.lerp(sc.wallTop, Colors.black, .08)!, u * .015));
+        // the top of a partition: a board with its own grain and the odd knot
+        final hh = _hash(r.left.toInt(), r.top.toInt(), 17);
+        final grain = Art.stroke(Color.lerp(sc.wallTop, Colors.black, .1)!, u * .012);
+        for (var k = 0; k < 3; k++) {
+          final y = r.top + r.height * (.22 + k * .26 + ((hh >> k) % 5) * .02);
+          c.drawPath(Path()..moveTo(r.left, y)..quadraticBezierTo(r.center.dx + ((hh >> (k + 3)) % 9 - 4) * u * .02, y + u * .03 * (k.isOdd ? 1 : -1), r.right, y + u * .01), grain);
+        }
+        if (hh % 5 == 0) c.drawOval(Rect.fromCenter(center: r.center + Offset(u * .15, 0), width: u * .09, height: u * .05), grain);
       case WallKind.fence:
         final h = _hash(r.left.toInt(), r.top.toInt());
         for (var k = 0; k < 4; k++) {
@@ -466,10 +469,13 @@ class SceneLayers {
         const colors = [Color(0xFFFFF8E8), Color(0xFFF7E3B5), Color(0xFFF3D1C4)];
         for (var i = -1; i <= 1; i++) {
           final r = Rect.fromCenter(center: at + Offset(i * u * .2, -u * .02), width: u * .13, height: u * .3);
+          c.save();
+          c.translate(r.center.dx, r.top);
+          c.rotate(((h >> (i + 2)) % 5 - 2) * .03);
+          c.translate(-r.center.dx, -r.top);
           Art.inked(c, Path()..addRect(r), colors[(i + 1 + h) % 3], w * .7);
-          for (var k = 0; k < 3; k++) {
-            c.drawLine(r.topCenter + Offset(0, u * (.06 + k * .07)), r.topCenter + Offset(0, u * (.1 + k * .07)), Art.stroke(kInk.withValues(alpha: .7), w));
-          }
+          Art.scribble(c, r.topCenter + Offset(0, u * .02), r.height - u * .04, u * .055, h + i, kInk.withValues(alpha: .8));
+          c.restore();
         }
       case Decor.window:
         final r = Rect.fromCenter(center: at, width: u * .56, height: u * .3);
@@ -490,8 +496,10 @@ class SceneLayers {
       case Decor.poster:
         final r = Rect.fromCenter(center: at, width: u * .34, height: u * .28);
         Art.inked(c, Path()..addRect(r), const Color(0xFFFFF4DC), w * .8);
-        c.drawCircle(r.center + Offset(0, -u * .03), u * .06, Art.fill(pal.shu));
-        c.drawLine(r.bottomLeft + Offset(u * .06, -u * .06), r.bottomRight + Offset(-u * .06, -u * .06), Art.stroke(kInk.withValues(alpha: .6), w));
+        // a two-colour print poster: a sun off-centre, scribbled lines
+        c.drawCircle(r.center + Offset(u * .05, -u * .04), u * .065, Art.fill(pal.shu));
+        c.drawRect(Rect.fromLTWH(r.left, r.bottom - u * .07, r.width, u * .07), Art.fill(pal.noren.withValues(alpha: .85)));
+        Art.scribble(c, r.topLeft + Offset(u * .07, u * .02), r.height - u * .1, u * .045, h, kInk.withValues(alpha: .7));
       case Decor.lamp:
         c.drawLine(at + Offset(0, -u * .14), at + Offset(0, -u * .02), Art.stroke(kInk, w));
         final shade = Path()
@@ -740,12 +748,17 @@ class BoardPainter {
         var at = slot(k) + Offset(wobble * (k + 1), 0);
         if (buried >= 0 && k > buried) at += Offset(0, -u * .26 * reveal);
         if (k == buried) {
-          canvas.drawCircle(
-              at + Offset(0, -u * .06),
-              u * .3,
-              Paint()
-                ..color = pal.glow.withValues(alpha: .9 * reveal.clamp(0.0, 1.0))
-                ..maskFilter = MaskFilter.blur(BlurStyle.normal, u * .09));
+          // a flat disc of light with a ring of short ink rays around it,
+          // like an emphasis mark in a picture book
+          final a = reveal.clamp(0.0, 1.0);
+          final gc = at + Offset(0, -u * .06);
+          canvas.drawCircle(gc, u * .27, Art.fill(pal.glow.withValues(alpha: .85 * a)));
+          final ray = Art.stroke(kInk.withValues(alpha: .7 * a), u * .025);
+          for (var r = 0; r < 9; r++) {
+            final ang = r * math.pi * 2 / 9 + .2;
+            final d = Offset(math.cos(ang), math.sin(ang));
+            canvas.drawLine(gc + d * u * .31, gc + d * u * (.38 + (r % 3) * .03), ray);
+          }
         }
         Art.stackDish(canvas, at, du, shown[k], highlight: k == shown.length - 1 && shown.length > 1);
       }
@@ -793,19 +806,13 @@ class BoardPainter {
         ..color = const Color(0xFFE6D8C8)
         ..blendMode = BlendMode.modulate);
     }
-    PaperGrain.paint(canvas, all, opacity: .5);
+    PaperGrain.paint(canvas, all, opacity: .4);
+    PrintGrain.paint(canvas, all, opacity: .85);
     canvas.restore();
     if (f.night) {
       canvas.drawPicture(layers.lights);
       // the courier carries a little warmth with them
-      canvas.drawCircle(
-        center,
-        u * 1.2,
-        Paint()
-          ..blendMode = BlendMode.screen
-          ..shader = RadialGradient(colors: [pal.glow.withValues(alpha: .2), pal.glow.withValues(alpha: 0)])
-              .createShader(Rect.fromCircle(center: center, radius: u * 1.2)),
-      );
+      Art.lightPool(canvas, center, u * 1.1, pal.glow, .2);
     }
   }
 }

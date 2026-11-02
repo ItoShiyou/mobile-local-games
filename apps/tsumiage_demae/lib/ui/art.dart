@@ -4,9 +4,18 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../game/engine.dart';
+import 'paper.dart';
 
 /// Sumi-brown ink used for every outline on the board.
-const kInk = Color(0xFF3A2B22);
+const kInk = Color(0xFF33251E);
+
+/// Where the ink pools: light comes from the top left, so every outline is
+/// thin on that side and heavy on the shadow side (bottom right).
+const Offset kInkWeight = Offset(.5, .65);
+
+/// The colour "block" is printed a hair off the key block, up and to the
+/// left, like a woodblock or risograph pass that did not quite line up.
+const Offset kRegistration = Offset(-.7, -.5);
 
 enum Mood { waiting, upset, happy }
 
@@ -30,14 +39,103 @@ class Art {
   static RRect rr(double x, double y, double w, double h, double r) =>
       RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r));
 
-  /// Fill then outline.
+  /// Fill then outline, printed rather than vector-stroked: a heavier ink
+  /// edge on the shadow side, the colour slightly off register, and a
+  /// thinner key line on top. Three draws, no path work, so it is cheap
+  /// enough for sprites that repaint every frame.
   static void inked(Canvas c, Path p, Color color, double w) {
+    final wo = kInkWeight * w, ro = kRegistration * w;
+    c.save();
+    c.translate(wo.dx, wo.dy);
+    c.drawPath(p, fill(kInk));
+    c.translate(ro.dx - wo.dx, ro.dy - wo.dy);
     c.drawPath(p, fill(color));
-    c.drawPath(p, stroke(kInk, w));
+    c.restore();
+    c.drawPath(p, stroke(kInk, w * .72));
   }
 
+  /// A cast shadow: flat and hard-edged, the way a print would do it.
   static void shadow(Canvas c, Offset center, double w, double h, [double a = .22]) {
-    c.drawOval(Rect.fromCenter(center: center, width: w, height: h), fill(Color.fromRGBO(40, 25, 15, a)));
+    c.drawOval(Rect.fromCenter(center: center + Offset(w * .06, 0), width: w, height: h), fill(Color.fromRGBO(60, 30, 20, a)));
+  }
+
+  /// A highlight that is unprinted paper rather than gloss: a short,
+  /// slightly bent sliver of the paper colour.
+  static void nick(Canvas c, Offset at, double len, double w, {double angle = -.5, Color color = const Color(0xE6FFF8EA)}) {
+    final d = Offset(math.cos(angle), math.sin(angle)) * (len / 2);
+    final n = Offset(-d.dy, d.dx) * .35;
+    c.drawPath(
+        Path()
+          ..moveTo(at.dx - d.dx, at.dy - d.dy)
+          ..quadraticBezierTo(at.dx + n.dx, at.dy + n.dy, at.dx + d.dx, at.dy + d.dy),
+        stroke(color, w));
+  }
+
+  /// Brush writing in a vertical column (menu strips, posters), as it looks
+  /// from across the room: runs of joined, zig-zagging strokes with gaps
+  /// between words and a brush that thickens and thins. No letter shapes,
+  /// so it never reads as garbled text and needs no translation.
+  static void scribble(Canvas c, Offset top, double length, double size, int seed, Color color) {
+    var h = (seed * 7919 + 17) & 0x7fffffff;
+    int next(int m) {
+      h = (h * 1103515245 + 12345) & 0x7fffffff;
+      return (h >> 8) % m;
+    }
+
+    var y = top.dy + size * .25;
+    final end = top.dy + length;
+    while (y < end - size * .6) {
+      final yEnd = math.min(end, y + size * (1.1 + next(5) * .45));
+      final path = Path()..moveTo(top.dx + (next(3) - 1) * size * .12, y);
+      var k = 0;
+      var yy = y;
+      while (true) {
+        final step = size * (.3 + next(4) * .07);
+        if (yy + step > yEnd) break;
+        k++;
+        final kind = next(4);
+        if (kind == 0) {
+          // a straight downstroke, ending in a small hook
+          path
+            ..lineTo(top.dx + (next(3) - 1) * size * .04, yy + step * 1.4)
+            ..relativeLineTo(size * (next(2) == 0 ? .14 : -.14), -size * .1);
+          yy += step * 1.4;
+        } else {
+          final side = k.isOdd ? 1 : -1;
+          final x = top.dx + side * size * (.1 + next(4) * .07);
+          path.quadraticBezierTo(top.dx - side * size * .08, yy + step * .35, x, yy + step);
+          yy += step;
+        }
+      }
+      c.drawPath(path, stroke(color, size * (.13 + next(4) * .035)));
+      // now and then a dot or a short tick beside the column
+      if (next(3) == 0) c.drawCircle(Offset(top.dx + size * .32, y + size * .2), size * .08, fill(color));
+      y = yEnd + size * (.35 + next(3) * .15);
+    }
+  }
+
+  /// A pool of lamp light in two flat steps, like a block-printed bokashi
+  /// instead of a smooth airbrushed glow. The brighter core sits a little
+  /// below the lamp, where the light lands. [rough] gives the edges a
+  /// cut-by-hand wobble (for cached layers; it costs path work).
+  static void lightPool(Canvas c, Offset o, double r, Color glow, double a, {bool rough = false}) {
+    final outer = Rect.fromCircle(center: o, radius: r);
+    final inner = Rect.fromCenter(center: o + Offset(r * .04, r * .1), width: r * 1.1, height: r * 1.0);
+    // overlay keeps the warm colour saturated where screen would turn it
+    // to a grey haze on the dark evening colours
+    final po = Paint()
+      ..blendMode = BlendMode.overlay
+      ..color = glow.withValues(alpha: a * .7);
+    final pi = Paint()
+      ..blendMode = BlendMode.overlay
+      ..color = glow.withValues(alpha: a * .9);
+    if (rough) {
+      c.drawPath(Wob.oval(outer, seed: o.dx.toInt(), amp: r * .03), po);
+      c.drawPath(Wob.oval(inner, seed: o.dy.toInt(), amp: r * .025), pi);
+    } else {
+      c.drawOval(outer, po);
+      c.drawOval(inner, pi);
+    }
   }
 
   // ---------------------------------------------------------------- food
@@ -48,9 +146,17 @@ class Art {
     final col = dishColors[kind]!;
     switch (kind) {
       case 'a': // tomato
-        inked(canvas, Path()..addOval(Rect.fromCircle(center: c + Offset(0, s * .04), radius: s * .38)), col, w);
-        canvas.drawOval(Rect.fromCenter(center: c + Offset(-s * .15, -s * .06), width: s * .16, height: s * .1),
-            fill(Colors.white.withValues(alpha: .55)));
+        // a real tomato is lumpy and wider than it is tall
+        final body = Path()
+          ..moveTo(c.dx, c.dy - s * .3)
+          ..cubicTo(c.dx + s * .3, c.dy - s * .38, c.dx + s * .44, c.dy - s * .08, c.dx + s * .37, c.dy + s * .17)
+          ..cubicTo(c.dx + s * .3, c.dy + s * .42, c.dx - s * .26, c.dy + s * .44, c.dx - s * .36, c.dy + s * .2)
+          ..cubicTo(c.dx - s * .46, c.dy - s * .04, c.dx - s * .3, c.dy - s * .4, c.dx, c.dy - s * .3)
+          ..close();
+        inked(canvas, body, col, w);
+        canvas.drawArc(Rect.fromCenter(center: c + Offset(s * .05, s * .07), width: s * .5, height: s * .5), .3, 1.3, false,
+            stroke(const Color(0x33601810), w * 1.6));
+        nick(canvas, c + Offset(-s * .19, -s * .08), s * .14, w * 1.1, angle: -1.1);
         final calyx = Path();
         for (var i = 0; i < 5; i++) {
           final a = -math.pi / 2 + i * 2 * math.pi / 5;
@@ -70,8 +176,9 @@ class Art {
         canvas.drawLine(c + Offset(-s * .46, s * .3), c + Offset(s * .46, -s * .3), stroke(const Color(0xFFD8B27A), w * 1.2));
         for (var i = -1; i <= 1; i++) {
           final p = c + Offset(i * s * .25, -i * s * .165);
-          inked(canvas, Path()..addOval(Rect.fromCircle(center: p, radius: s * .17)), i == 0 ? const Color(0xFF86B85F) : col, w);
-          canvas.drawCircle(p + Offset(-s * .055, -s * .06), s * .045, fill(Colors.white.withValues(alpha: .5)));
+          final r = s * (.17 + i * .006);
+          inked(canvas, Path()..addOval(Rect.fromCenter(center: p, width: r * 2.04, height: r * 1.9)), i == 0 ? const Color(0xFFA9C46A) : col, w);
+          if (i != 0) nick(canvas, p + Offset(-s * .06, -s * .05), s * .07, w * .9, angle: -1.2);
         }
       case 'c': // tamagoyaki
         final body = Path()..addRRect(rr(c.dx - s * .42, c.dy - s * .24, s * .84, s * .5, s * .14));
@@ -86,9 +193,11 @@ class Art {
         final leaf = Path()..addOval(Rect.fromCenter(center: c + Offset(s * .2, -s * .38), width: s * .26, height: s * .13));
         inked(canvas, leaf, const Color(0xFF6FA64E), w * .8);
         const pts = [(-.18, -.16), (0.0, -.2), (.18, -.16), (-.1, .02), (.1, .02), (0.0, .2)];
-        for (final (x, y) in pts) {
-          inked(canvas, Path()..addOval(Rect.fromCircle(center: c + Offset(x * s, y * s + s * .06), radius: s * .13)), col, w * .8);
-          canvas.drawCircle(c + Offset(x * s - s * .04, y * s + s * .02), s * .035, fill(Colors.white.withValues(alpha: .5)));
+        for (var k = 0; k < pts.length; k++) {
+          final (x, y) = pts[k];
+          final g = k.isEven ? col : Color.lerp(col, kInk, .18)!;
+          inked(canvas, Path()..addOval(Rect.fromCircle(center: c + Offset(x * s, y * s + s * .06), radius: s * (.125 + (k % 3) * .006))), g, w * .8);
+          if (k == 0 || k == 3) nick(canvas, c + Offset(x * s - s * .045, y * s + s * .025), s * .05, w * .8, angle: -1.3);
         }
     }
   }
@@ -98,9 +207,29 @@ class Art {
     final w = u * .03;
     shadow(canvas, c + Offset(0, u * .12), u * .72, u * .38);
     final plate = Rect.fromCenter(center: c + Offset(0, u * .06), width: u * .72, height: u * .46);
-    inked(canvas, Path()..addOval(plate), const Color(0xFFFFFCF4), w);
-    canvas.drawOval(plate.deflate(u * .07), stroke(const Color(0xFFE2D8C4), w));
-    canvas.drawArc(plate.deflate(u * .03), math.pi * 1.1, .9, false, stroke(const Color(0xFF4A6F9E), w * .9));
+    // every dish comes on its own kind of plate, as in a real diner where
+    // nothing matches: blue-rimmed porcelain, a square mashiko plate,
+    // a long plate for skewers, a dotted kobachi
+    switch (kind) {
+      case 'c':
+        final sq = Rect.fromCenter(center: plate.center, width: u * .66, height: u * .44);
+        inked(canvas, Path()..addRRect(RRect.fromRectAndRadius(sq, Radius.circular(u * .06))), const Color(0xFFE9DCC4), w);
+        canvas.drawRRect(RRect.fromRectAndRadius(sq.deflate(u * .05), Radius.circular(u * .03)), stroke(const Color(0x668A5A3A), w * .8));
+      case 'b':
+        final long = Rect.fromCenter(center: plate.center, width: u * .8, height: u * .38);
+        inked(canvas, Path()..addOval(long), const Color(0xFFFFF9EC), w);
+        canvas.drawArc(long.deflate(u * .03), math.pi * .1, .8, false, stroke(const Color(0xFF6E8E4E), w * .9));
+      case 'd':
+        inked(canvas, Path()..addOval(plate), const Color(0xFFFFF9EC), w);
+        for (var i = 0; i < 9; i++) {
+          final a = i * math.pi * 2 / 9 + .3;
+          canvas.drawCircle(plate.center + Offset(math.cos(a) * plate.width * .43, math.sin(a) * plate.height * .41), u * .012, fill(const Color(0xFF3F6596)));
+        }
+      default:
+        inked(canvas, Path()..addOval(plate), const Color(0xFFFFF9EC), w);
+        canvas.drawOval(plate.deflate(u * .07), stroke(const Color(0xFFE2D8C4), w));
+        canvas.drawArc(plate.deflate(u * .03), math.pi * 1.1, .9, false, stroke(const Color(0xFF3F6596), w * .9));
+    }
     food(canvas, c + Offset(0, -u * .01), u * .46, kind);
   }
 
@@ -136,8 +265,15 @@ class Art {
       ..moveTo(c.dx + side * u * .16, c.dy + u * .3 - hop)
       ..cubicTo(c.dx + side * u * .42, c.dy + u * .32 - hop, c.dx + side * u * .38 + sway, c.dy + u * .05 - hop,
           c.dx + side * u * .3 + sway, c.dy - u * .02 - hop);
-    canvas.drawPath(tail, stroke(kInk, u * .11));
-    canvas.drawPath(tail, stroke(const Color(0xFFF6EEE0), u * .065));
+    // the tail is a brush stroke: ink laid down heavier on the shadow side,
+    // the fur colour printed over it a little off register
+    final wo = kInkWeight * w, ro = kRegistration * w;
+    canvas.save();
+    canvas.translate(wo.dx * .5, wo.dy * .5);
+    canvas.drawPath(tail, stroke(kInk, u * .105));
+    canvas.translate((ro.dx - wo.dx) * .5, (ro.dy - wo.dy) * .5);
+    canvas.drawPath(tail, stroke(_fur, u * .064));
+    canvas.restore();
     // body in a happi coat
     final body = Path()
       ..moveTo(head.dx - u * .21, head.dy + u * .36)
@@ -146,33 +282,59 @@ class Art {
       ..quadraticBezierTo(head.dx + u * .24, head.dy + u * .14, head.dx + u * .21, head.dy + u * .36)
       ..close();
     inked(canvas, body, pal.noren, w);
-    canvas.drawLine(head + Offset(-u * .1, u * .14), head + Offset(0, u * .33), stroke(const Color(0xFFF6EEDF), u * .05));
-    canvas.drawLine(head + Offset(u * .1, u * .14), head + Offset(0, u * .33), stroke(const Color(0xFFF6EEDF), u * .05));
-    // ears
-    const fur = Color(0xFFFBF4E8);
+    // collar: the white lapels, slightly uneven like a hand-dyed band
+    canvas.drawLine(head + Offset(-u * .1, u * .14), head + Offset(-u * .005, u * .33), stroke(const Color(0xFFF4EBD9), u * .05));
+    canvas.drawLine(head + Offset(u * .1, u * .14), head + Offset(u * .005, u * .33), stroke(const Color(0xFFF4EBD9), u * .044));
+    // ears: never quite a mirrored pair; the one on the far side of the
+    // knot sits a touch lower and splays out
     for (final sx in [-1.0, 1.0]) {
+      final far = sx == side;
+      final tipY = far ? -.295 : -.315, tipX = far ? .215 : .195;
       final ear = Path()
-        ..moveTo(head.dx + sx * u * .23, head.dy - u * .06)
-        ..lineTo(head.dx + sx * u * .2, head.dy - u * .31)
+        ..moveTo(head.dx + sx * u * .235, head.dy - u * .06)
+        ..lineTo(head.dx + sx * u * tipX, head.dy + u * tipY)
         ..lineTo(head.dx + sx * u * .05, head.dy - u * .2)
         ..close();
-      inked(canvas, ear, fur, w);
+      inked(canvas, ear, _fur, w);
       final inner = Path()
         ..moveTo(head.dx + sx * u * .2, head.dy - u * .1)
-        ..lineTo(head.dx + sx * u * .19, head.dy - u * .25)
+        ..lineTo(head.dx + sx * u * (tipX - .01), head.dy + u * (tipY + .06))
         ..lineTo(head.dx + sx * u * .1, head.dy - u * .18)
         ..close();
-      canvas.drawPath(inner, fill(const Color(0xFFF2B3BE)));
+      canvas.drawPath(inner.shift(ro), fill(const Color(0xFFEFA7AF)));
     }
     // head
     final face = Path()..addOval(Rect.fromCenter(center: head, width: u * .56, height: u * .5));
-    inked(canvas, face, fur, w);
-    // brown patch over one eye
+    inked(canvas, face, _fur, w);
+    // calico patch over one eye: an irregular shape, printed with the fur
     canvas.save();
+    canvas.translate(ro.dx, ro.dy);
     canvas.clipPath(face);
-    canvas.drawOval(Rect.fromCenter(center: head + Offset(-u * .16, -u * .12), width: u * .3, height: u * .26), fill(const Color(0xFFD9A066)));
+    final p0 = head + Offset(-u * .16, -u * .12);
+    canvas.drawPath(
+        Path()
+          ..moveTo(p0.dx - u * .2, p0.dy - u * .1)
+          ..lineTo(p0.dx + u * .11, p0.dy - u * .14)
+          ..cubicTo(p0.dx + u * .16, p0.dy - u * .04, p0.dx + u * .13, p0.dy + u * .06, p0.dx + u * .07, p0.dy + u * .1)
+          ..cubicTo(p0.dx + u * .03, p0.dy + u * .15, p0.dx - u * .07, p0.dy + u * .13, p0.dx - u * .1, p0.dy + u * .16)
+          ..lineTo(p0.dx - u * .2, p0.dy + u * .1)
+          ..close(),
+        fill(const Color(0xFFD69A5C)));
     canvas.restore();
-    canvas.drawPath(face, stroke(kInk, w));
+    canvas.drawPath(face, stroke(kInk, w * .72));
+    // cheek fur: two little tufts break the oval, one per side, not mirrored
+    canvas.drawPath(
+        Path()
+          ..moveTo(head.dx - u * .272, head.dy + u * .05)
+          ..lineTo(head.dx - u * .3, head.dy + u * .085)
+          ..lineTo(head.dx - u * .262, head.dy + u * .1),
+        stroke(kInk, w * .8));
+    canvas.drawPath(
+        Path()
+          ..moveTo(head.dx + u * .262, head.dy + u * .085)
+          ..lineTo(head.dx + u * .292, head.dy + u * .115)
+          ..lineTo(head.dx + u * .245, head.dy + u * .135),
+        stroke(kInk, w * .8));
     // hachimaki
     final band = Path()
       ..moveTo(head.dx - u * .27, head.dy - u * .06)
@@ -183,8 +345,8 @@ class Art {
     inked(canvas, band, pal.shu, w * .8);
     final knot = head + Offset(-side * u * .27, -u * .04);
     final flutter = math.sin(phase * 5) * u * .02;
-    for (final a in [-.5, .3]) {
-      final tipOff = Offset(-side * u * .13, a * u * .2 + flutter);
+    for (final (a, len) in [(-.5, .13), (.3, .11)]) {
+      final tipOff = Offset(-side * u * len, a * u * .2 + flutter);
       final t = Path()
         ..moveTo(knot.dx, knot.dy)
         ..lineTo(knot.dx + tipOff.dx, knot.dy + tipOff.dy - u * .03)
@@ -201,20 +363,38 @@ class Art {
         canvas.drawArc(Rect.fromCenter(center: e, width: u * .09, height: u * .06), .2, math.pi - .4, false, stroke(kInk, w));
       } else {
         canvas.drawOval(Rect.fromCenter(center: e, width: u * .075, height: u * .095), fill(kInk));
-        canvas.drawCircle(e + Offset(u * .014, -u * .018), u * .015, fill(Colors.white));
+        canvas.drawCircle(e + Offset(u * .014, -u * .018), u * .015, fill(const Color(0xFFFFFBF0)));
       }
     }
     // nose, mouth, whiskers, cheeks
     final m = head + Offset(lx, u * .12 + ly);
-    canvas.drawCircle(m + Offset(0, -u * .02), u * .022, fill(const Color(0xFFE07A8C)));
+    canvas.drawCircle(m + Offset(0, -u * .02), u * .022, fill(const Color(0xFFDB6F7E)));
     canvas.drawArc(Rect.fromCenter(center: m + Offset(-u * .025, u * .005), width: u * .05, height: u * .04), .3, math.pi - .6, false, stroke(kInk, w * .7));
     canvas.drawArc(Rect.fromCenter(center: m + Offset(u * .025, u * .005), width: u * .05, height: u * .04), .3, math.pi - .6, false, stroke(kInk, w * .7));
     for (final sx in [-1.0, 1.0]) {
-      canvas.drawCircle(head + Offset(sx * u * .17, u * .09), u * .035, fill(const Color(0x55F08A9A)));
-      canvas.drawLine(head + Offset(sx * u * .2, u * .06), head + Offset(sx * u * .33, u * .03), stroke(kInk, w * .5));
-      canvas.drawLine(head + Offset(sx * u * .2, u * .1), head + Offset(sx * u * .33, u * .12), stroke(kInk, w * .5));
+      // blush: a flat dab with a few quick hatch marks
+      final bc = head + Offset(sx * u * .17, u * .09);
+      canvas.drawOval(Rect.fromCenter(center: bc, width: u * .08, height: u * .055), fill(const Color(0x66EC8A96)));
+      for (var k = -1; k <= 1; k++) {
+        final o = bc + Offset(k * u * .018, 0);
+        canvas.drawLine(o + Offset(u * .008, -u * .012), o + Offset(-u * .006, u * .012), stroke(const Color(0x99D9626F), w * .45));
+      }
+      // whiskers: a little curve, different on each side
+      final wy = sx < 0 ? .0 : .012;
+      canvas.drawPath(
+          Path()
+            ..moveTo(head.dx + sx * u * .2, head.dy + u * (.06 + wy))
+            ..quadraticBezierTo(head.dx + sx * u * .27, head.dy + u * (.035 + wy), head.dx + sx * u * .34, head.dy + u * (.04 + wy)),
+          stroke(kInk, w * .5));
+      canvas.drawPath(
+          Path()
+            ..moveTo(head.dx + sx * u * .2, head.dy + u * (.1 + wy))
+            ..quadraticBezierTo(head.dx + sx * u * .27, head.dy + u * (.105 + wy), head.dx + sx * u * (sx < 0 ? .33 : .31), head.dy + u * (.13 + wy)),
+          stroke(kInk, w * .45));
     }
   }
+
+  static const _fur = Color(0xFFFBF3E4);
 
   // ------------------------------------------------------------- guests
 
@@ -230,7 +410,16 @@ class Art {
     final cx = o.dx + u * .5;
     final headC = Offset(cx, o.dy + u * .36 + bob);
     // chair back
-    inked(canvas, Path()..addRRect(rr(cx - u * .3, o.dy + u * .14, u * .6, u * .5, u * .1)), pal.woodDark, w);
+    // bentwood chair back: arched on top, square at the seat
+    final chair = Path()
+      ..moveTo(cx - u * .29, o.dy + u * .64)
+      ..lineTo(cx - u * .3, o.dy + u * .3)
+      ..quadraticBezierTo(cx - u * .29, o.dy + u * .13, cx + u * .02, o.dy + u * .14)
+      ..quadraticBezierTo(cx + u * .3, o.dy + u * .15, cx + u * .3, o.dy + u * .32)
+      ..lineTo(cx + u * .29, o.dy + u * .64)
+      ..close();
+    inked(canvas, chair, pal.woodDark, w);
+    canvas.drawLine(Offset(cx - u * .2, o.dy + u * .24), Offset(cx + u * .18, o.dy + u * .235), stroke(Color.lerp(pal.woodDark, Colors.white, .18)!, w * .8));
     // shoulders / clothes
     final body = Path()
       ..moveTo(cx - u * .27, o.dy + u * .72)
@@ -335,9 +524,12 @@ class Art {
       canvas.drawLine(Offset(cx - u * .03, ey + u * .01), Offset(cx + u * .03, ey + u * .01), stroke(kInk, w * .6));
     }
     // table in front
-    final top = Path()..addRRect(rr(o.dx + u * .07, o.dy + u * .62, u * .86, u * .16, u * .06));
+    // a plain plank table: square cut, with grain and a knot
+    final top = Path()..addRect(Rect.fromLTWH(o.dx + u * .07, o.dy + u * .62, u * .86, u * .15));
     inked(canvas, top, pal.woodLight, w);
-    final front = Path()..addRRect(rr(o.dx + u * .1, o.dy + u * .76, u * .8, u * .14, u * .03));
+    canvas.drawLine(Offset(o.dx + u * .14, o.dy + u * .7), Offset(o.dx + u * .52, o.dy + u * .705), stroke(pal.wood, w * .7));
+    canvas.drawOval(Rect.fromCenter(center: Offset(o.dx + u * (.66 + (index % 3) * .08), o.dy + u * .695), width: u * .05, height: u * .025), stroke(pal.wood, w * .6));
+    final front = Path()..addRect(Rect.fromLTWH(o.dx + u * .1, o.dy + u * .77, u * .8, u * .13));
     inked(canvas, front, pal.wood, w);
     // hands
     for (final sx in [-1.0, 1.0]) {
@@ -375,16 +567,27 @@ class Art {
     canvas.translate(center.dx, center.dy);
     canvas.rotate(tilt);
     canvas.scale(scale);
-    final tail = Path()
-      ..moveTo(-u * .08, u * .13)
-      ..lineTo(-u * .17, u * .25)
-      ..lineTo(-u * .01, u * .15);
-    final card = Path()..addRRect(rr(-u * .2, -u * .17, u * .4, u * .32, u * .08));
-    final both = Path.combine(PathOperation.union, card, tail..close());
-    canvas.drawPath(both.shift(Offset(u * .015, u * .025)), fill(const Color(0x33000000)));
-    inked(canvas, both, const Color(0xFFFFFCF4), upset ? w * 1.6 : w);
+    // an order slip (denpyo): square top, torn bottom, a pointer tab
+    final both = Path()
+      ..moveTo(-u * .19, -u * .17)
+      ..lineTo(u * .2, -u * .165)
+      ..lineTo(u * .195, u * .12);
+    const teeth = [.0, .03, -.01, .025, .0, .02, -.005];
+    for (var i = 1; i < teeth.length; i++) {
+      both.lineTo(u * (.195 - i * .065), u * (.12 + teeth[i] + (i.isOdd ? .018 : 0)));
+    }
+    both
+      ..lineTo(-u * .03, u * .15)
+      ..lineTo(-u * .17, u * .26)
+      ..lineTo(-u * .1, u * .14)
+      ..lineTo(-u * .19, u * .13)
+      ..close();
+    canvas.drawPath(both.shift(Offset(u * .02, u * .03)), fill(const Color(0x30200C04)));
+    inked(canvas, both, const Color(0xFFFFF9EC), upset ? w * 1.6 : w);
+    // a vermilion rule across the top, like a printed slip
+    canvas.drawLine(Offset(-u * .15, -u * .12), Offset(u * .16, -u * .12), stroke(const Color(0xB3C8452F), w * .8));
     if (upset) canvas.drawPath(both, stroke(const Color(0xFFC8452F), w * 1.4));
-    food(canvas, Offset(0, -u * .01), u * .26, kind);
+    food(canvas, Offset(0, u * .0), u * .25, kind);
     canvas.restore();
   }
 
@@ -420,17 +623,22 @@ class Art {
     canvas.restore();
   }
 
-  /// Arrows painted on the ground for a one-way floor.
+  /// Arrows painted on the ground for a one-way floor: brushed on with a
+  /// stencil, so the edges wander and the paint has worn thin in places.
+  /// Drawn once into the cached scene layer, so the path work is free.
   static void paintedArrow(Canvas canvas, Offset c, double u, Dir d, {Color color = const Color(0xE6FFF8E6)}) {
-    final p = stroke(color, u * .09);
+    final seed = (c.dx * 3 + c.dy * 7).toInt();
     for (var k = 0; k < 2; k++) {
       final o = (k - .5) * u * .22;
-      final x = c.dx + d.dx * o, y = c.dy + d.dy * o;
+      final x = c.dx + d.dx * o + d.dy * (k - .5) * u * .02, y = c.dy + d.dy * o + d.dx * (k - .5) * u * .02;
       final path = Path()
         ..moveTo(x - d.dx * u * .09 - d.dy * u * .17, y - d.dy * u * .09 - d.dx * u * .17)
         ..lineTo(x + d.dx * u * .09, y + d.dy * u * .09)
         ..lineTo(x - d.dx * u * .09 + d.dy * u * .17, y - d.dy * u * .09 + d.dx * u * .17);
-      canvas.drawPath(path, p);
+      canvas.drawPath(Wob.around(path, seed: seed + k, amp: u * .008, step: u * .04), stroke(color, u * (k == 0 ? .09 : .085)));
+      // worn patches where feet have scuffed the paint
+      final worn = stroke(const Color(0x55B0A898), u * .03);
+      canvas.drawLine(Offset(x - d.dy * u * .1, y - d.dx * u * .1), Offset(x - d.dy * u * .05 + d.dx * u * .02, y - d.dx * u * .05 + d.dy * u * .02), worn);
     }
   }
 

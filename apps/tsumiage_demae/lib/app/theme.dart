@@ -64,10 +64,10 @@ class Palette extends ThemeExtension<Palette> {
 
   static const day = Palette(
     night: false,
-    paper: Color(0xFFF3EAD8),
-    paperDeep: Color(0xFFE6D6BA),
-    card: Color(0xFFFBF5EA),
-    ink: Color(0xFF3A2B22),
+    paper: Color(0xFFF1E4C8),
+    paperDeep: Color(0xFFE2CFAC),
+    card: Color(0xFFFBF4E4),
+    ink: Color(0xFF33251E),
     inkSoft: Color(0xFF7D6754),
     line: Color(0xFFD5C2A2),
     wood: Color(0xFFC6955F),

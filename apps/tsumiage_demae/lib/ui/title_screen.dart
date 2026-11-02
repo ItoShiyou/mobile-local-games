@@ -97,7 +97,8 @@ class _TitleScreenState extends State<TitleScreen> with SingleTickerProviderStat
         final k = (h / 844).clamp(.68, 1.2);
         final eave = pad.top + 96 * k;
         final ground = h - 170 * k - pad.bottom;
-        final doorL = w * .29, doorR = w * .71;
+        // the door sits right of centre: a real shopfront is rarely symmetric
+        final doorL = w * .33, doorR = w * .73;
         return AnimatedBuilder(
           animation: _t,
           builder: (context, _) {
@@ -235,15 +236,11 @@ class _ShopFrontPainter extends CustomPainter {
     final night = pal.night;
     // sky
     final skyR = Rect.fromLTWH(0, 0, w, eave);
-    canvas.drawRect(
-      skyR,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: night ? const [Color(0xFF141A33), Color(0xFF2E3354)] : const [Color(0xFFB9D8E8), Color(0xFFF1E8D2)],
-        ).createShader(skyR),
-    );
+    // sky in flat printed bands, darkest at the top
+    final bands = night ? const [Color(0xFF141A33), Color(0xFF1F2544), Color(0xFF2E3354)] : const [Color(0xFF8FBBD0), Color(0xFFB6D3DC), Color(0xFFE7E0C6)];
+    canvas.drawRect(skyR, Art.fill(bands.last));
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, eave * .62), Art.fill(bands[1]));
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, eave * .3), Art.fill(bands[0]));
     if (night) {
       final rnd = math.Random(2);
       for (var i = 0; i < 30; i++) {
@@ -251,7 +248,17 @@ class _ShopFrontPainter extends CustomPainter {
       }
       canvas.drawCircle(Offset(w * .82, eave * .35), 14, Art.fill(const Color(0xFFFFF1C4)));
     } else {
-      canvas.drawOval(Rect.fromCenter(center: Offset(w * .78, eave * .4), width: 90, height: 24), Art.fill(Colors.white.withValues(alpha: .7)));
+      // a woodblock cloud: a flat, lobed shape with an ink line under it
+      final cl = Offset(w * .74, eave * .42);
+      final cloud = Path()
+        ..moveTo(cl.dx - 52, cl.dy + 8)
+        ..quadraticBezierTo(cl.dx - 50, cl.dy - 8, cl.dx - 30, cl.dy - 4)
+        ..quadraticBezierTo(cl.dx - 22, cl.dy - 20, cl.dx + 2, cl.dy - 12)
+        ..quadraticBezierTo(cl.dx + 18, cl.dy - 24, cl.dx + 34, cl.dy - 8)
+        ..quadraticBezierTo(cl.dx + 54, cl.dy - 8, cl.dx + 58, cl.dy + 8)
+        ..close();
+      canvas.drawPath(cloud, Art.fill(const Color(0xFFF6F0E0)));
+      canvas.drawLine(Offset(cl.dx - 44, cl.dy + 8), Offset(cl.dx + 50, cl.dy + 8), Art.stroke(const Color(0x5533251E), 1.4));
     }
     // facade boards
     final facade = Rect.fromLTWH(0, eave, w, ground - eave);
@@ -278,18 +285,23 @@ class _ShopFrontPainter extends CustomPainter {
     // doorway: warm interior
     final door = Rect.fromLTRB(doorL, eave + 36, doorR, ground);
     canvas.drawRect(door, Art.fill(night ? const Color(0xFF6B4226) : const Color(0xFF7A5234)));
-    canvas.drawRect(
-      door,
-      Paint()
-        ..shader = RadialGradient(center: const Alignment(0, .6), colors: [const Color(0xFFFFC56B).withValues(alpha: night ? .55 : .3), Colors.transparent])
-            .createShader(door),
-    );
+    // lamp light inside: a flat, hard-edged wedge from the ceiling lamp
+    canvas.drawPath(
+        Path()
+          ..moveTo(door.center.dx - 10, door.top)
+          ..lineTo(door.center.dx + 10, door.top)
+          ..lineTo(door.right, door.bottom)
+          ..lineTo(door.left, door.bottom)
+          ..close(),
+        Paint()
+          ..blendMode = BlendMode.screen
+          ..color = const Color(0xFFFFC56B).withValues(alpha: night ? .3 : .16));
     // a glimpse inside: menu tags on the back wall, the counter and stools
     final inside = door.deflate(8);
     for (var i = 0; i < 6; i++) {
       final tr = Rect.fromLTWH(inside.left + 6 + i * (inside.width - 12) / 6, inside.top + inside.height * .42, (inside.width - 12) / 6 - 4, inside.height * .16);
-      canvas.drawRect(tr, Art.fill(const Color(0xFFF3E6CC).withValues(alpha: .85)));
-      canvas.drawLine(tr.topCenter + const Offset(0, 5), tr.bottomCenter - const Offset(0, 5), Art.stroke(kInk.withValues(alpha: .5), 1.4));
+      canvas.drawRect(tr.shift(Offset(0, (i * 7 % 3).toDouble())), Art.fill(const Color(0xFFF3E6CC).withValues(alpha: .85)));
+      Art.scribble(canvas, tr.topCenter + Offset(0, 2 + (i * 7 % 3)), tr.height - 4, 5, i * 3 + 1, kInk.withValues(alpha: .6));
     }
     final counterTop = inside.top + inside.height * .7;
     canvas.drawRect(Rect.fromLTRB(door.left, counterTop, door.right, counterTop + 10), Art.fill(const Color(0xFFD2A676)));
@@ -333,10 +345,16 @@ class _ShopFrontPainter extends CustomPainter {
     // ground: stone paving
     final g = Rect.fromLTWH(0, ground, w, h - ground);
     canvas.drawRect(g, Art.fill(night ? const Color(0xFF6A6660) : const Color(0xFFC9C1B2)));
+    // paving stones laid by hand: every one a different width and wear
+    final stone = night ? const Color(0xFF7A766E) : const Color(0xFFD8D0C0);
     for (var y = ground + 4, row = 0; y < h; y += 26, row++) {
-      for (var x = (row.isOdd ? -20.0 : 0.0); x < w; x += 44) {
-        canvas.drawPath(Wob.rrect(Rect.fromLTWH(x + 2, y, 40, 22), 6, seed: row * 31 + x.toInt(), amp: .8),
-            Art.fill(night ? const Color(0xFF7A766E) : const Color(0xFFD8D0C0)));
+      var x = -((row * 37) % 30).toDouble();
+      for (var i = 0; x < w; i++) {
+        final hh = (row * 131 + i * 71) % 97;
+        final sw = 30.0 + hh % 28;
+        final tone = Color.lerp(stone, hh.isEven ? Colors.white : Colors.black, (hh % 5) * .025)!;
+        canvas.drawPath(Wob.rrect(Rect.fromLTWH(x + 2, y + (hh % 3) - 1, sw, 21 + (hh % 3)), 2.0 + hh % 7, seed: row * 31 + i, amp: .9), Art.fill(tone));
+        x += sw + 4;
       }
     }
     canvas.drawLine(Offset(0, ground), Offset(w, ground), Art.stroke(kInk, 2));
@@ -348,13 +366,11 @@ class _ShopFrontPainter extends CustomPainter {
       Art.inked(canvas, Path()..addOval(Rect.fromCenter(center: pot + Offset(i * 12.0, -36 - (1 - i.abs()) * 10), width: 30, height: 22)), pal.leaf, 1.4);
     }
     PaperGrain.paint(canvas, Offset.zero & size, opacity: .6);
+    PrintGrain.paint(canvas, Offset.zero & size);
   }
 
   void _glow(Canvas c, Offset at, double r) {
-    final rect = Rect.fromCircle(center: at, radius: r);
-    c.drawCircle(at, r, Paint()
-      ..blendMode = BlendMode.screen
-      ..shader = RadialGradient(colors: [pal.glow.withValues(alpha: .5), pal.glow.withValues(alpha: 0)]).createShader(rect));
+    Art.lightPool(c, at, r * .62, pal.glow, .32, rough: true);
   }
 
   @override

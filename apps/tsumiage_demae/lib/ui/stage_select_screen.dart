@@ -362,9 +362,15 @@ class _MenuTagPainter extends CustomPainter {
       amp: .6,
     );
     if (glow) {
+      // the next stage: a hard-edged halo, two flat steps of lamp colour
       canvas.drawPath(shape, Paint()
-        ..color = pal.glow.withValues(alpha: .8)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7));
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 12
+        ..color = pal.glow.withValues(alpha: .35));
+      canvas.drawPath(shape, Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6
+        ..color = pal.glow.withValues(alpha: .8));
     }
     final face = !unlocked ? const Color(0xFF9C8466) : (cleared ? const Color(0xFFF1E2C3) : const Color(0xFFE6CDA2));
     canvas.drawPath(shape.shift(const Offset(2, 3)), Art.fill(const Color(0x33000000)));
@@ -377,6 +383,7 @@ class _MenuTagPainter extends CustomPainter {
           Art.stroke(const Color(0x18000000), 1));
     }
     PaperGrain.paint(canvas, r, opacity: .8);
+    PrintGrain.paint(canvas, r, opacity: .7);
     canvas.restore();
     canvas.drawPath(shape, Art.stroke(kInk.withValues(alpha: unlocked ? .9 : .5), 1.4));
     canvas.drawCircle(Offset(w / 2, r.top + 5), 2, Art.fill(kInk.withValues(alpha: .7)));

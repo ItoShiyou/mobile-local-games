@@ -93,7 +93,78 @@ class PaperGrain {
   }
 }
 
-/// Page background: washi with grain and a soft darkening towards the edges.
+/// The texture of a hand-pulled print over flat colour: uneven ink coverage
+/// (mottled where the baren pressed less), starved specks where the paper
+/// shows through, and faint circular baren strokes. Laid over flat fills so
+/// a large area of one colour never reads as a perfect digital fill.
+class PrintGrain {
+  static ui.Image? _image;
+  static const double _size = 320;
+
+  static ui.Image? get image {
+    if (_image != null) return _image;
+    try {
+      final rec = ui.PictureRecorder();
+      final c = Canvas(rec);
+      final rnd = math.Random(11);
+      // wrap every mark so the tile repeats without a seam
+      void wrapped(void Function(Offset shift) draw) {
+        for (final dx in [-_size, 0.0, _size]) {
+          for (final dy in [-_size, 0.0, _size]) {
+            draw(Offset(dx, dy));
+          }
+        }
+      }
+
+      // mottling: large, soft, uneven patches (blurred once, here, not per frame)
+      for (var i = 0; i < 46; i++) {
+        final o = Offset(rnd.nextDouble() * _size, rnd.nextDouble() * _size);
+        final r = rnd.nextDouble() * 26 + 8;
+        final light = rnd.nextDouble() < .6;
+        final p = Paint()
+          ..color = (light ? const Color(0xFFFFFFFF) : const Color(0xFF2A1A10)).withValues(alpha: rnd.nextDouble() * .05 + .025)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * .45);
+        final sx = rnd.nextDouble() * .8 + .6;
+        wrapped((s) => c.drawOval(Rect.fromCenter(center: o + s, width: r * 2 * sx, height: r * 2 / sx), p));
+      }
+      // baren swirls
+      for (var i = 0; i < 26; i++) {
+        final o = Offset(rnd.nextDouble() * _size, rnd.nextDouble() * _size);
+        final r = rnd.nextDouble() * 18 + 10;
+        final a0 = rnd.nextDouble() * math.pi * 2;
+        final p = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = rnd.nextDouble() * 1.6 + .6
+          ..color = const Color(0xFFFFFFFF).withValues(alpha: rnd.nextDouble() * .025 + .015);
+        final sweep = rnd.nextDouble() * 1.2 + .8;
+        wrapped((s) => c.drawArc(Rect.fromCircle(center: o + s, radius: r), a0, sweep, false, p));
+      }
+      // starved specks: tiny gaps where ink did not take
+      for (var i = 0; i < 700; i++) {
+        final o = Offset(rnd.nextDouble() * _size, rnd.nextDouble() * _size);
+        final p = Paint()..color = const Color(0xFFFFFBF0).withValues(alpha: rnd.nextDouble() * .22 + .05);
+        c.drawRect(Rect.fromCenter(center: o, width: rnd.nextDouble() * 1.4 + .4, height: rnd.nextDouble() * .9 + .3), p);
+      }
+      _image = rec.endRecording().toImageSync(_size.toInt(), _size.toInt());
+    } catch (_) {
+      _image = null;
+    }
+    return _image;
+  }
+
+  static void paint(Canvas canvas, Rect rect, {double opacity = 1}) {
+    final img = image;
+    if (img == null) return;
+    canvas.drawRect(
+        rect,
+        Paint()
+          ..shader = ImageShader(img, TileMode.repeated, TileMode.repeated, Matrix4.identity().storage)
+          ..color = Color.fromRGBO(0, 0, 0, opacity));
+  }
+}
+
+/// Page background: washi with fibres and uneven print coverage. No
+/// airbrushed vignette: depth comes from the things drawn on it.
 class PaperBackground extends StatelessWidget {
   const PaperBackground({super.key, required this.child});
   final Widget child;
@@ -114,15 +185,7 @@ class _PaperPainter extends CustomPainter {
     final r = Offset.zero & size;
     canvas.drawRect(r, Paint()..color = pal.paper);
     PaperGrain.paint(canvas, r, opacity: pal.night ? .7 : 1);
-    canvas.drawRect(
-      r,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [Colors.transparent, pal.paperDeep.withValues(alpha: pal.night ? .9 : .7)],
-          stops: const [.55, 1],
-          radius: .95,
-        ).createShader(r),
-    );
+    PrintGrain.paint(canvas, r, opacity: pal.night ? .5 : .9);
   }
 
   @override
@@ -175,16 +238,18 @@ class _SlipPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final r = Offset.zero & size;
     final path = Wob.rrect(r.deflate(1), 5, seed: seed, amp: 1.1);
-    canvas.drawPath(path.shift(const Offset(0, 3)), Paint()..color = const Color(0x22000000)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+    // a hard, offset shadow: the slip lies on the page, it does not float
+    canvas.drawPath(path.shift(const Offset(2.5, 3)), Paint()..color = const Color(0x24301808));
     canvas.drawPath(path, Paint()..color = color);
     canvas.save();
     canvas.clipPath(path);
     PaperGrain.paint(canvas, r, opacity: .8);
+    PrintGrain.paint(canvas, r, opacity: .6);
     canvas.restore();
     canvas.drawPath(path, Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2
-      ..color = pal.ink.withValues(alpha: .25));
+      ..color = pal.ink.withValues(alpha: .3));
     if (tape) {
       final tp = Paint()..color = const Color(0xAAE9D9A6);
       for (final (x, a) in [(size.width * .12, -.35), (size.width * .88, .3)]) {
