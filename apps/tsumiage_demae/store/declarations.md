@@ -66,7 +66,7 @@
 | プライバシーポリシーの公開URL | `store/privacy-policy.html` の開発者名・連絡先を埋めて公開する |
 | サポートURL（App Store） | `store/support.html` の開発者名・連絡先を埋めて公開する |
 | 開発者名・連絡先メール | 未定（ストアで公開されます） |
-| スクリーンショット | `store/screenshots/`（iPhone 1290×2796、iPad 2048×2732、Android 1080×1920、日英各6枚） |
+| スクリーンショット | `store/screenshots/`（iPhone 1290×2796、Android 1080×1920、日英各6枚） |
 | Play のフィーチャーグラフィック | `store/feature-graphic-{ja,en}.png`（1024×500） |
 | アプリアイコン | iOS は AppIcon に 1024 を含めて同梱済み、Play 用は `store/icon-512.png` |
 | リリース署名 | Android：アップロード鍵（`docs/RELEASE.md`）。iOS：App Store Connect API キーで Actions が自動署名（`docs/APP_STORE.md`） |

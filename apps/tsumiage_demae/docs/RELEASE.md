@@ -78,7 +78,7 @@ Mac で手元からビルドする場合は次のとおりです。
 - ホーム画面の名前：日本語「つみあげ出前」、英語「Stack & Deliver」（`ios/Runner/{ja,en}.lproj/InfoPlist.strings`）
 - `ITSAppUsesNonExemptEncryption = false` 設定済み（輸出コンプライアンスの質問を省略）
 - プライバシーマニフェスト `ios/Runner/PrivacyInfo.xcprivacy` 同梱
-- iPhone は縦のみ、iPad は縦（上下）でフルスクリーン
+- iPhone 専用・縦のみ（iPad では iPhone 版の拡大表示で動く。iPad 用の画面とスクリーンショットは不要）
 - アイコンはアルファチャンネルなし（App Store の規定）。`tool/make_icons.js` が iOS 用だけ RGB で書き出す
 
 ## アイコン・音を作り直す
@@ -94,7 +94,7 @@ python3 tool/make_audio.py   # 効果音と BGM（外部素材なし）
 
 | 素材 | ファイル | 作り直し方 |
 | --- | --- | --- |
-| スクリーンショット（iPhone 1290×2796、iPad 2048×2732、Android 1080×1920、日英各6枚） | `store/screenshots/{ios,ipad,android}/{ja,en}/` | Web版をビルドして配信し `node tool/make_store_screens.js` |
+| スクリーンショット（iPhone 1290×2796、Android 1080×1920、日英各6枚） | `store/screenshots/{ios,android}/{ja,en}/` | Web版をビルドして配信し `node tool/make_store_screens.js` |
 | Play のフィーチャーグラフィック（1024×500） | `store/feature-graphic-{ja,en}.png` | 同上 |
 | アイコン（Play 用 512×512） | `store/icon-512.png` | `node tool/make_icons.js` |
 | 掲載文（アプリ名・サブタイトル・説明文・キーワードなど） | `store/listing.md` | 文字数は `python3 tool/check_listing.py` で確認 |

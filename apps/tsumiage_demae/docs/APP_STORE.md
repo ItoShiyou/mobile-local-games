@@ -11,12 +11,12 @@ Mac がなくても公開できるように、署名とアップロードは Git
 | --- | --- |
 | Bundle ID | `io.github.itoshiyou.tsumiageDemae`（公開後は変更不可） |
 | バージョン | `pubspec.yaml` の `version`（いまは 1.1.0）。ビルド番号は Actions の実行番号で自動的に増える |
-| 対応端末 | iPhone（縦）・iPad（縦、フルスクリーン）。iOS 15 以上 |
+| 対応端末 | iPhone（縦）。iOS 15 以上。iPad では iPhone 版がそのまま拡大表示で動く（iPad 専用の画面は作っていない） |
 | ホーム画面の名前 | 日本語端末「つみあげ出前」、英語端末「Stack & Deliver」 |
 | アイコン | 1024×1024 を含む全サイズ（App Store の規定どおりアルファチャンネルなし） |
 | プライバシーマニフェスト | `ios/Runner/PrivacyInfo.xcprivacy`（トラッキングなし・収集データなし・UserDefaults は理由 CA92.1） |
 | 輸出コンプライアンス | `ITSAppUsesNonExemptEncryption = false`（暗号化なし。提出時の質問は出ない） |
-| スクリーンショット | `store/screenshots/ios/{ja,en}/`（iPhone 6.9インチ 1290×2796）、`store/screenshots/ipad/{ja,en}/`（iPad 13インチ 2048×2732）。各6枚 |
+| スクリーンショット | `store/screenshots/ios/{ja,en}/`（iPhone 6.9インチ 1290×2796）。各6枚。iPhone 専用なので iPad 用は不要 |
 | 掲載文 | `store/listing.md`（日英。文字数チェック済み） |
 | 申告の回答 | `store/declarations.md` |
 
@@ -111,7 +111,6 @@ Mac がなくても公開できるように、署名とアップロードは Git
 | 項目 | 入力 |
 | --- | --- |
 | スクリーンショット（iPhone 6.9インチ） | `store/screenshots/ios/ja/01.png`〜`06.png`（英語のページには `ios/en/`） |
-| スクリーンショット（iPad 13インチ） | `store/screenshots/ipad/ja/01.png`〜`06.png`（英語のページには `ipad/en/`） |
 | プロモーションテキスト・概要・キーワード | `store/listing.md` からそのまま |
 | サポートURL | 下の「公開URLの用意」 |
 | 著作権 | `2026 （開発者名）` |
@@ -152,6 +151,6 @@ The language can be switched to English in Settings (gear icon, top right).
 ## 実機での最終確認（TestFlight で）
 
 - [ ] 音（消音スイッチがオンなら無音）、振動、ホームに戻って復帰したときの BGM
-- [ ] 小さい iPhone（SE）と iPad で見た目
+- [ ] 小さい iPhone（SE）と大きい iPhone で見た目（iPad では iPhone 版の拡大表示になる）
 - [ ] ダークモード、英語表示（ホーム画面の名前が「Stack & Deliver」になる）
 - [ ] 1面から最終面まで通しでプレイ

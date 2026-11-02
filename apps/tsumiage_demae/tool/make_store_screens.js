@@ -5,7 +5,7 @@
 //   node tool/make_store_screens.js
 //
 // Needs Playwright + Chromium (PLAYWRIGHT / CHROMIUM env vars to override).
-// Writes store/screenshots/{ios,android,ipad}/{ja,en}/NN.png and
+// Writes store/screenshots/{ios,android}/{ja,en}/NN.png and
 // store/feature-graphic-{ja,en}.png.
 const path = require('path');
 const fs = require('fs');
@@ -21,7 +21,6 @@ const FONT = `url(data:font/ttf;base64,${fs.readFileSync(path.join(ROOT, 'assets
 const devices = {
   ios: { w: 430, h: 932, dpr: 3 }, // 1290 x 2796 (iPhone 6.7"/6.9")
   android: { w: 432, h: 768, dpr: 2.5 }, // 1080 x 1920 (9:16)
-  ipad: { w: 1024, h: 1366, dpr: 2 }, // 2048 x 2732 (iPad 13"), needed because the app runs on iPad
 };
 
 const ids = ['b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08',
