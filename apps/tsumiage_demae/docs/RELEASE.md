@@ -66,17 +66,20 @@ flutter test
 
 ## iOS
 
-1. Xcode で `ios/Runner.xcworkspace` を開き、Signing & Capabilities で Team を設定
-2. Bundle Identifier を決める（既定は `io.github.itoshiyou.tsumiageDemae`）
-3. ビルド
+Mac がなくても、GitHub Actions の「tsumiage_demae iOS release」が署名して App Store Connect（TestFlight）へアップロードします。
+アカウントの準備から審査提出までの手順は [APP_STORE.md](APP_STORE.md) にまとめています。
 
-   ```sh
-   flutter build ipa --release
-   # build/ios/ipa/*.ipa を Transporter か Xcode Organizer でアップロード
-   ```
+Mac で手元からビルドする場合は次のとおりです。
 
+1. Xcode で `ios/Runner.xcworkspace` を開き、Signing & Capabilities で Team を設定する。
+2. `flutter build ipa --release` を実行し、`build/ios/ipa/*.ipa` を Transporter か Xcode Organizer でアップロードする。
+
+- Bundle ID：`io.github.itoshiyou.tsumiageDemae`
+- ホーム画面の名前：日本語「つみあげ出前」、英語「Stack & Deliver」（`ios/Runner/{ja,en}.lproj/InfoPlist.strings`）
 - `ITSAppUsesNonExemptEncryption = false` 設定済み（輸出コンプライアンスの質問を省略）
+- プライバシーマニフェスト `ios/Runner/PrivacyInfo.xcprivacy` 同梱
 - iPhone は縦のみ、iPad は縦（上下）でフルスクリーン
+- アイコンはアルファチャンネルなし（App Store の規定）。`tool/make_icons.js` が iOS 用だけ RGB で書き出す
 
 ## アイコン・音を作り直す
 
@@ -91,11 +94,12 @@ python3 tool/make_audio.py   # 効果音と BGM（外部素材なし）
 
 | 素材 | ファイル | 作り直し方 |
 | --- | --- | --- |
-| スクリーンショット（iPhone 1290×2796、Android 1080×1920、日英各6枚） | `store/screenshots/{ios,android}/{ja,en}/` | Web版をビルドして配信し `node tool/make_store_screens.js` |
+| スクリーンショット（iPhone 1290×2796、iPad 2048×2732、Android 1080×1920、日英各6枚） | `store/screenshots/{ios,ipad,android}/{ja,en}/` | Web版をビルドして配信し `node tool/make_store_screens.js` |
 | Play のフィーチャーグラフィック（1024×500） | `store/feature-graphic-{ja,en}.png` | 同上 |
 | アイコン（Play 用 512×512） | `store/icon-512.png` | `node tool/make_icons.js` |
 | 掲載文（アプリ名・サブタイトル・説明文・キーワードなど） | `store/listing.md` | 文字数は `python3 tool/check_listing.py` で確認 |
 | プライバシーポリシー | `store/privacy-policy.html` | 開発者名と連絡先を埋めて公開する |
+| サポートページ | `store/support.html` | 同上 |
 | プライバシー申告・年齢レーティングの回答 | `store/declarations.md` | — |
 
 ## プライバシー
@@ -118,9 +122,9 @@ App Store の App Privacy は「データを収集しない」、Google Play の
 
 - [ ] 開発者名と連絡先メールを決め、`store/privacy-policy.html` と `store/listing.md` の（開発者名）を埋める
 - [ ] プライバシーポリシーを公開URLに置く（GitHub Pages、個人サイトなど。App Store と Play の両方で必須）
-- [ ] サポートURL（App Store 必須。問い合わせ先が書かれたページで可）
+- [ ] サポートURL（App Store 必須。`store/support.html` を埋めて公開）
 - [ ] Google Play デベロッパー登録、アップロード鍵の作成と上記シークレットの登録
-- [ ] Apple Developer Program 登録、Xcode で Team を設定して `flutter build ipa`
+- [ ] Apple Developer Program 登録、App Store Connect の準備と API キーのシークレット登録（`docs/APP_STORE.md`）
 - [ ] 実機での最終確認（以下）
 
 #### 実機での最終確認

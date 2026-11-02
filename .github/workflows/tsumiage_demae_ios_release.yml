@@ -1,0 +1,101 @@
+name: tsumiage_demae iOS release
+
+# Builds the App Store build, signs it and uploads it to App Store Connect
+# (it then shows up in TestFlight, ready to submit for review). No Mac needed.
+# Run it from the Actions tab, or push a tag such as tsumiage-v1.1.0.
+#
+# Before the first run (see apps/tsumiage_demae/docs/APP_STORE.md):
+# - create the app in App Store Connect with the bundle ID
+#   io.github.itoshiyou.tsumiageDemae
+# - add these repository secrets (Settings > Secrets and variables > Actions),
+#   shared by every app of this Apple account:
+#     APPLE_TEAM_ID                10-character Team ID
+#     APPSTORE_API_KEY_ID          App Store Connect API key ID
+#     APPSTORE_API_ISSUER_ID       issuer ID shown above the key list
+#     APPSTORE_API_PRIVATE_KEY     contents of the AuthKey_XXXX.p8 file
+#   The key needs the Admin role so Xcode can create the distribution
+#   certificate and provisioning profile in the cloud (automatic signing).
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'tsumiage-v*'
+
+defaults:
+  run:
+    working-directory: apps/tsumiage_demae
+
+env:
+  FLUTTER_VERSION: '3.47.5'
+
+jobs:
+  app-store:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Check the secrets
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TEAM_ID" ] || [ -z "$KEY_ID" ] || [ -z "$ISSUER_ID" ] || [ -z "$PRIVATE_KEY" ]; then
+            echo "::error::App Store Connect secrets are missing (see the top of this workflow and docs/APP_STORE.md)."
+            exit 1
+          fi
+          printf '%s\n' "$PRIVATE_KEY" > "$RUNNER_TEMP/AuthKey.p8"
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      # Unsigned build first: generates the Flutter build settings (version
+      # from pubspec.yaml, build number from the run number, which grows with
+      # every upload as App Store Connect requires).
+      - run: flutter build ios --release --no-codesign --build-number ${{ github.run_number }}
+      - name: Archive (signed)
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+        working-directory: apps/tsumiage_demae/ios
+        run: |
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            archive
+      - name: Upload to App Store Connect
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+        working-directory: apps/tsumiage_demae/ios
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID"
+      - if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"

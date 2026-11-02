@@ -6,6 +6,48 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 
 const ROOT = path.join(__dirname, '..');
 
+// The App Store rejects app icons with an alpha channel, even a fully
+// opaque one: re-encode an RGBA PNG (8-bit, as the canvas writes it) as RGB.
+function opaquePng(png) {
+  const zlib = require('zlib');
+  let pos = 8, w = 0, h = 0;
+  const idat = [];
+  while (pos < png.length) {
+    const len = png.readUInt32BE(pos), type = png.toString('ascii', pos + 4, pos + 8);
+    const data = png.subarray(pos + 8, pos + 8 + len);
+    if (type === 'IHDR') {
+      w = data.readUInt32BE(0); h = data.readUInt32BE(4);
+      if (data[8] !== 8 || data[9] !== 6 || data[12] !== 0) throw new Error('expected 8-bit RGBA, not interlaced');
+    } else if (type === 'IDAT') idat.push(data);
+    pos += 12 + len;
+  }
+  const raw = zlib.inflateSync(Buffer.concat(idat));
+  const stride = w * 4, out = Buffer.alloc(h * (w * 3 + 1));
+  let prev = Buffer.alloc(stride);
+  for (let y = 0; y < h; y++) {
+    const f = raw[y * (stride + 1)], line = Buffer.from(raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1)));
+    for (let i = 0; i < stride; i++) {
+      const a = i >= 4 ? line[i - 4] : 0, b = prev[i], c = i >= 4 ? prev[i - 4] : 0;
+      let add = 0;
+      if (f === 1) add = a;
+      else if (f === 2) add = b;
+      else if (f === 3) add = (a + b) >> 1;
+      else if (f === 4) { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); add = pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+      line[i] = (line[i] + add) & 255;
+    }
+    const o = y * (w * 3 + 1);
+    for (let x = 0; x < w; x++) line.copy(out, o + 1 + x * 3, x * 4, x * 4 + 3);
+    prev = line;
+  }
+  const chunk = (type, data) => {
+    const head = Buffer.alloc(8); head.writeUInt32BE(data.length, 0); head.write(type, 4, 'ascii');
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(zlib.crc32(Buffer.concat([head.subarray(4), data])), 0);
+    return Buffer.concat([head, data, crc]);
+  };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  return Buffer.concat([png.subarray(0, 8), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(out, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
+}
+
 // Draws the icon on a canvas of size s. `mode`: 'full' (square, background),
 // 'fg' (adaptive-icon foreground: transparent, art inside the 66% safe zone),
 // 'mask' (web maskable: background, art in the safe zone).
@@ -127,7 +169,8 @@ const jobs = [
     }, [size, mode]);
     const out = path.join(ROOT, file);
     fs.mkdirSync(path.dirname(out), { recursive: true });
-    fs.writeFileSync(out, Buffer.from(url.split(',')[1], 'base64'));
+    const png = Buffer.from(url.split(',')[1], 'base64');
+    fs.writeFileSync(out, file.startsWith('ios/') ? opaquePng(png) : png);
   }
   await b.close();
   console.log(`wrote ${jobs.length} icons`);

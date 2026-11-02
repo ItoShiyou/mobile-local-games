@@ -19,8 +19,8 @@
 
 ### プライバシーマニフェスト
 
-- `shared_preferences` の iOS 実装と Flutter 本体が、それぞれ PrivacyInfo.xcprivacy（UserDefaults の利用理由 CA92.1 など）を同梱しています。
-- アプリ自身のコードが「理由の申告が必要なAPI」を直接使うことはないため、追加の申告は不要の見込みです。提出時に Xcode の「Generate Privacy Report」で確認してください。
+- アプリ自身の `ios/Runner/PrivacyInfo.xcprivacy` を同梱しています（トラッキングなし、収集データなし、UserDefaults の利用理由 CA92.1）。
+- `shared_preferences` の iOS 実装と Flutter 本体も、それぞれ PrivacyInfo.xcprivacy を同梱しています。
 
 ### 輸出コンプライアンス
 
@@ -64,9 +64,9 @@
 | 項目 | 状態 |
 | --- | --- |
 | プライバシーポリシーの公開URL | `store/privacy-policy.html` の開発者名・連絡先を埋めて公開する |
-| サポートURL（App Store） | GitHub のページや簡単な問い合わせページ |
+| サポートURL（App Store） | `store/support.html` の開発者名・連絡先を埋めて公開する |
 | 開発者名・連絡先メール | 未定（ストアで公開されます） |
-| スクリーンショット | `store/screenshots/`（iPhone 1290×2796、Android 1080×1920、日英各6枚） |
+| スクリーンショット | `store/screenshots/`（iPhone 1290×2796、iPad 2048×2732、Android 1080×1920、日英各6枚） |
 | Play のフィーチャーグラフィック | `store/feature-graphic-{ja,en}.png`（1024×500） |
 | アプリアイコン | iOS は AppIcon に 1024 を含めて同梱済み、Play 用は `store/icon-512.png` |
-| リリース署名 | Android：アップロード鍵と `android/key.properties`。iOS：Apple Developer の証明書 |
+| リリース署名 | Android：アップロード鍵（`docs/RELEASE.md`）。iOS：App Store Connect API キーで Actions が自動署名（`docs/APP_STORE.md`） |

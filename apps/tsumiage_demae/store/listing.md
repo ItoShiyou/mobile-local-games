@@ -104,5 +104,5 @@ Deliver within par for three stamps. Your best move count is saved for every sta
 | 価格 | 無料 | 無料 |
 | 年齢 | 4+ | IARC：全年齢（3+ / Everyone） |
 | 著作権表記 | © 2026 （開発者名） | — |
-| サポートURL | （要用意：GitHub のページなど） | — |
+| サポートURL | `store/support.html` を公開したURL | — |
 | プライバシーポリシーURL | `store/privacy-policy.html` を公開したURL | 同左 |
