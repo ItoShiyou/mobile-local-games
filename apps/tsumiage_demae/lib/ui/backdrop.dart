@@ -74,12 +74,7 @@ class _BackdropPainter extends CustomPainter {
         }
         canvas.drawRect(Rect.fromLTWH(0, h * .7, w, 12), Art.fill(sc.wallTrim));
       case WallKind.fence:
-        final sky = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: night ? const [Color(0xFF1B2440), Color(0xFF3A3F5C)] : const [Color(0xFFBFD9E6), Color(0xFFEDE6D2)],
-        );
-        canvas.drawRect(r, Paint()..shader = sky.createShader(r));
+        _bandedSky(canvas, r, night ? const [Color(0xFF1B2440), Color(0xFF283052), Color(0xFF3A3F5C)] : const [Color(0xFF9CC3D6), Color(0xFFBCD6DC), Color(0xFFE9E1C8)]);
         // rooftops far away
         final roof = Path()..moveTo(0, h * .2);
         for (var i = 0; i <= 8; i++) {
@@ -98,25 +93,22 @@ class _BackdropPainter extends CustomPainter {
         _wainscot(canvas, fence, sc.wallFront, vertical: true, board: 26);
         canvas.drawRect(Rect.fromLTWH(0, fence.top, w, 8), Art.fill(sc.wallTrim));
       case WallKind.stalls:
-        const sky = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF141A33), Color(0xFF2C2A4A), Color(0xFF3E3350)],
-        );
-        canvas.drawRect(r, Paint()..shader = sky.createShader(r));
+        _bandedSky(canvas, r, const [Color(0xFF141A33), Color(0xFF221F3E), Color(0xFF2E2A4A), Color(0xFF3E3350)]);
         final rnd = math.Random(5);
         for (var i = 0; i < 60; i++) {
           canvas.drawCircle(Offset(rnd.nextDouble() * w, rnd.nextDouble() * h * .5), rnd.nextDouble() * 1.2 + .3,
               Art.fill(Colors.white.withValues(alpha: rnd.nextDouble() * .6 + .2)));
         }
         // trees
-        for (var i = 0; i < 9; i++) {
-          canvas.drawCircle(Offset(w * i / 8, h * .82), w * .14, Art.fill(const Color(0xFF1E2A22)));
+        for (var i = 0; i < 11; i++) {
+          final rr = w * (.09 + (_h(i, 21) % 5) * .018);
+          canvas.drawCircle(Offset(w * (i + (_h(i, 22) % 7 - 3) * .05) / 9, h * (.8 + (_h(i, 23) % 5) * .008)), rr, Art.fill(const Color(0xFF1E2A22)));
         }
         canvas.drawRect(Rect.fromLTWH(0, h * .84, w, h * .16), Art.fill(const Color(0xFF1E2A22)));
     }
     _wallThings(canvas, size);
     PaperGrain.paint(canvas, r);
+    PrintGrain.paint(canvas, r);
     if (night && sc.wall != WallKind.stalls && sc.wall != WallKind.fence) {
       canvas.drawRect(r, Paint()
         ..color = const Color(0xFFB4AAB4)
@@ -139,12 +131,18 @@ class _BackdropPainter extends CustomPainter {
       const papers = [Color(0xFFFFF8E8), Color(0xFFF7E3B5), Color(0xFFF3D1C4), Color(0xFFFFF8E8)];
       final n = (w / 34).floor();
       for (var i = 0; i < n; i++) {
-        final x = 12 + i * (w - 24) / n;
-        final tr = Rect.fromLTWH(x, y0, 20, 58 + (_h(i, 5) % 3) * 6.0);
-        Art.inked(c, Path()..addRect(tr), papers[i % papers.length], 1.2);
-        for (var k = 0; k < 4; k++) {
-          c.drawLine(tr.topCenter + Offset(0, 8 + k * 11.0), tr.topCenter + Offset(0, 14 + k * 11.0), Art.stroke(kInk.withValues(alpha: .75), 2));
-        }
+        // pinned up by hand over the years: uneven gaps, widths and tilt
+        final x = 12 + i * (w - 24) / n + (_h(i, 6) % 7 - 3).toDouble();
+        final tw = 18.0 + _h(i, 7) % 5;
+        final tr = Rect.fromLTWH(x, y0, tw, 54 + (_h(i, 5) % 4) * 6.0);
+        c.save();
+        c.translate(tr.center.dx, tr.top);
+        c.rotate((_h(i, 8) % 5 - 2) * .02);
+        c.translate(-tr.center.dx, -tr.top);
+        Art.inked(c, Path()..addRect(tr), papers[_h(i, 9) % papers.length], 1.2);
+        Art.scribble(c, tr.topCenter + const Offset(0, 4), tr.height - 10, 9, i * 13 + 5, kInk.withValues(alpha: .85));
+        if (_h(i, 10) % 4 == 0) c.drawCircle(tr.bottomCenter + const Offset(0, -6), 2.6, Art.fill(pal.shu.withValues(alpha: .85)));
+        c.restore();
       }
       // clock and calendar lower on the wall
       final clock = Offset(w * .13, h * .43);
@@ -155,11 +153,9 @@ class _BackdropPainter extends CustomPainter {
       final cal = Rect.fromLTWH(w * .8, h * .38, 44, 56);
       Art.inked(c, Path()..addRect(cal), const Color(0xFFFFF8E8), 1.4);
       c.drawRect(Rect.fromLTWH(cal.left, cal.top, cal.width, 14), Art.fill(pal.shu));
-      for (var j = 0; j < 3; j++) {
-        for (var i = 0; i < 4; i++) {
-          c.drawCircle(Offset(cal.left + 8 + i * 9.5, cal.top + 24 + j * 10.0), 1.6, Art.fill(kInk.withValues(alpha: .6)));
-        }
-      }
+      // a big hand-painted day number, off-centre, and a scribbled note
+      Art.scribble(c, Offset(cal.left + 15, cal.top + 20), 30, 15, 77, kInk.withValues(alpha: .85));
+      Art.scribble(c, Offset(cal.left + 34, cal.top + 22), 24, 6, 31, kInk.withValues(alpha: .5));
     } else if (sc.wall == WallKind.brick) {
       // framed pictures and wall lamps in the cafe
       for (final (x, y, fw, fh) in [(w * .1, h * .27, 70.0, 52.0), (w * .62, h * .3, 60.0, 76.0)]) {
@@ -169,6 +165,24 @@ class _BackdropPainter extends CustomPainter {
         c.drawCircle(fr.center + const Offset(-6, 4), fw * .14, Art.fill(const Color(0xFF7FA58F)));
         c.drawCircle(fr.center + const Offset(8, -6), fw * .1, Art.fill(pal.shu.withValues(alpha: .7)));
       }
+    }
+  }
+
+  /// Sky printed in a few flat bands (an ita-bokashi), not a smooth
+  /// gradient; the band edges wander a little.
+  void _bandedSky(Canvas c, Rect r, List<Color> bands) {
+    c.drawRect(r, Art.fill(bands.last));
+    final n = bands.length;
+    for (var i = n - 2; i >= 0; i--) {
+      final y = r.top + r.height * (i + 1) / (n + 1.2);
+      final edge = Path()..moveTo(r.left, r.top);
+      edge.lineTo(r.right, r.top);
+      edge.lineTo(r.right, y + (_h(i, 31) % 7 - 3));
+      for (var k = 8; k >= 0; k--) {
+        edge.lineTo(r.left + r.width * k / 8, y + (_h(i, k) % 9 - 4) * .8);
+      }
+      edge.close();
+      c.drawPath(edge, Art.fill(bands[i]));
     }
   }
 
@@ -189,10 +203,7 @@ class _BackdropPainter extends CustomPainter {
     for (var i = 1; i < n; i++) {
       final t = i / n;
       final p = Offset(w * t, y + 40 * 2 * t * (1 - t) * 1.0 + 4);
-      final glow = Rect.fromCircle(center: p + const Offset(0, 12), radius: 34);
-      c.drawCircle(p + const Offset(0, 12), 34, Paint()
-        ..blendMode = BlendMode.screen
-        ..shader = RadialGradient(colors: [pal.glow.withValues(alpha: .45), pal.glow.withValues(alpha: 0)]).createShader(glow));
+      Art.lightPool(c, p + const Offset(0, 12), 28, pal.glow, .45, rough: true);
       final body = Rect.fromCenter(center: p + const Offset(0, 12), width: 16, height: 20);
       Art.inked(c, Path()..addOval(body), (i + seed).isEven ? const Color(0xFFE0493A) : const Color(0xFFF6E7C8), 1.4);
       c.drawRect(Rect.fromCenter(center: body.topCenter, width: 8, height: 3), Art.fill(kInk));
@@ -236,11 +247,7 @@ class _DeskPainter extends CustomPainter {
       }
     }
     PaperGrain.paint(canvas, r);
-    canvas.drawRect(
-      r,
-      Paint()
-        ..shader = const RadialGradient(colors: [Color(0x00000000), Color(0x30000000)], stops: [.6, 1], radius: 1).createShader(r),
-    );
+    PrintGrain.paint(canvas, r);
   }
 
   @override

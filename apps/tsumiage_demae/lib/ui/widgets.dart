@@ -132,8 +132,10 @@ class _BlockPainter extends CustomPainter {
     final r = Rect.fromLTWH(1, 1 + press, size.width - 2, size.height - 2 - depth);
     final bottom = Rect.fromLTWH(1, 1 + press, size.width - 2, size.height - 2 - press);
     if (glow != null) {
-      canvas.drawRRect(RRect.fromRectAndRadius(bottom.inflate(3), const Radius.circular(12)),
-          Paint()..color = glow!.withValues(alpha: .7)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+      // a hard-edged halo in two flat steps, not a blurred glow
+      final halo = Wob.rrect(bottom.inflate(5), 13, seed: seed + 9, amp: .8);
+      canvas.drawPath(halo, Paint()..color = glow!.withValues(alpha: .35));
+      canvas.drawPath(Wob.rrect(bottom.inflate(2.5), 11, seed: seed + 8, amp: .6), Paint()..color = glow!.withValues(alpha: .7));
     }
     final side = Wob.rrect(bottom, 10, seed: seed, amp: .8);
     canvas.drawPath(side, Paint()..color = edge);
@@ -159,10 +161,7 @@ class _BlockPainter extends CustomPainter {
     canvas.save();
     canvas.clipPath(top);
     PaperGrain.paint(canvas, r, opacity: .6);
-    canvas.drawLine(r.topLeft + const Offset(8, 3), r.topRight + const Offset(-8, 3), Paint()
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..color = Colors.white.withValues(alpha: .25));
+    PrintGrain.paint(canvas, r, opacity: .7);
     canvas.restore();
     canvas.drawPath(top, Paint()
       ..style = PaintingStyle.stroke
@@ -241,6 +240,7 @@ class _SignPainter extends CustomPainter {
       canvas.drawPath(Path()..moveTo(r.left, y)..cubicTo(r.left + r.width * .3, y - 3, r.left + r.width * .6, y + 4, r.right, y), g);
     }
     PaperGrain.paint(canvas, r, opacity: .7);
+    PrintGrain.paint(canvas, r, opacity: .7);
     canvas.restore();
     canvas.drawPath(path, Paint()
       ..style = PaintingStyle.stroke
@@ -765,6 +765,11 @@ class NorenPainter extends CustomPainter {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), weave);
     }
     PaperGrain.paint(canvas, Offset.zero & size, opacity: .9);
+    PrintGrain.paint(canvas, Offset.zero & size);
+    // the hem is folded and sewn: a darker band of the same indigo
+    canvas.drawRect(Rect.fromLTWH(0, size.height - 9, size.width, 9), Paint()..color = const Color(0x2E000000));
+    // dye is never even: the cloth is a shade lighter near the rod
+    canvas.drawRect(Rect.fromLTWH(0, rod, size.width, (size.height - rod) * .22), Paint()..color = const Color(0x12FFFFFF));
     if (crest.isNotEmpty) _crest(canvas, size, rod, pw);
     canvas.restore();
     for (final p in panelPaths) {
@@ -786,9 +791,24 @@ class NorenPainter extends CustomPainter {
     // a white circle across the middle seam
     final cc = Offset(size.width / 2, (size.height + rod) / 2);
     final cr = math.min(size.height * .3, pw * .8);
-    canvas.drawCircle(cc, cr, Paint()
+    // resist-dyed (shiro-nuki): the ring is brushed, so it swells and thins
+    // and its two ends overlap where the brush started and stopped
+    final ring = Path();
+    const n = 48;
+    for (var i = 0; i <= n + 3; i++) {
+      final a = -1.9 + i * math.pi * 2 / n;
+      final rr = cr * (1 + math.sin(i * .7) * .012);
+      final p = cc + Offset(math.cos(a), math.sin(a)) * rr;
+      i == 0 ? ring.moveTo(p.dx, p.dy) : ring.lineTo(p.dx, p.dy);
+    }
+    canvas.drawPath(ring, Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = cr * .12
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = cr * .1
+      ..color = text);
+    canvas.drawArc(Rect.fromCircle(center: cc + Offset(cr * .02, cr * .02), radius: cr), .2, 1.6, false, Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = cr * .16
       ..color = text);
     final tp = TextPainter(
       text: TextSpan(text: crest, style: TextStyle(fontFamily: displayFont, fontSize: cr * 1.15, color: text, height: 1)),

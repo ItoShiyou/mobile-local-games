@@ -342,9 +342,7 @@ class _LanternPainter extends CustomPainter {
     canvas.drawLine(Offset(w / 2, 0), Offset(w / 2, h * .14), Art.stroke(kInk, 1.6));
     final body = Rect.fromLTWH(w * .06, h * .2, w * .88, h * .66);
     if (lit) {
-      final g = Rect.fromCircle(center: body.center, radius: w * 1.1);
-      canvas.drawCircle(body.center, w * 1.1, Paint()
-        ..shader = RadialGradient(colors: [pal.glow.withValues(alpha: .7), pal.glow.withValues(alpha: 0)]).createShader(g));
+      Art.lightPool(canvas, body.center, w * 1.05, pal.glow, .9);
     }
     final paper = lit ? const Color(0xFFFFE3A0) : const Color(0xFFF4E6CB);
     Art.inked(canvas, Path()..addOval(body), paper, 1.6);
@@ -470,8 +468,13 @@ class _TrayPadPainter extends CustomPainter {
     final inner = Rect.fromCircle(center: c, radius: r * .84);
     canvas.drawOval(inner, Art.fill(const Color(0xFF9E3A2E)));
     canvas.drawOval(inner, Art.stroke(const Color(0xFF5A1E18), 1.6));
-    // lacquer sheen
-    canvas.drawArc(inner.deflate(6), math.pi * 1.1, .9, false, Art.stroke(Colors.white.withValues(alpha: .22), 4));
+    // no glossy sheen: a hairline of gold maki-e round the rim instead, and
+    // the uneven texture of brushed lacquer
+    canvas.drawOval(inner.deflate(5), Art.stroke(const Color(0x80E9C46A), 1));
+    canvas.save();
+    canvas.clipPath(Path()..addOval(inner));
+    PrintGrain.paint(canvas, inner, opacity: .8);
+    canvas.restore();
     for (final d in Dir.values) {
       final a = math.atan2(d.dy.toDouble(), d.dx.toDouble());
       final path = Path()
@@ -490,7 +493,7 @@ class _TrayPadPainter extends CustomPainter {
         ..lineTo(m.dx - d.dx * s * .6 - d.dy * s, m.dy - d.dy * s * .6 - d.dx * s)
         ..lineTo(m.dx - d.dx * s * .6 + d.dy * s, m.dy - d.dy * s * .6 + d.dx * s)
         ..close();
-      Art.inked(canvas, tri, enabled ? gold : gold.withValues(alpha: .4), 1.4);
+      Art.inked(canvas, tri, enabled ? gold : Color.lerp(gold, const Color(0xFF9E3A2E), .6)!, 1.4);
     }
     // a small mitsudomoe-like swirl in the middle
     canvas.drawCircle(c, r * .15, Art.fill(const Color(0xFF7A2A22)));

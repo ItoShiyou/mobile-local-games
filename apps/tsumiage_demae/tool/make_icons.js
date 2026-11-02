@@ -13,72 +13,101 @@ const draw = `
 function draw(s, mode) {
   const c = document.createElement('canvas'); c.width = c.height = s;
   const x = c.getContext('2d');
+  // deterministic noise, so every size gets the same print texture
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   if (mode !== 'fg') {
-    const g = x.createLinearGradient(0, 0, 0, s);
-    g.addColorStop(0, '#F3EAD8'); g.addColorStop(1, '#E3D1B2');
-    x.fillStyle = g; x.fillRect(0, 0, s, s);
+    // flat kinari paper, no gradient: depth comes from the print, not an airbrush
+    x.fillStyle = '#F1E4C8'; x.fillRect(0, 0, s, s);
     if (mode === 'full') {
-      x.fillStyle = '#2F4B6B'; x.fillRect(0, 0, s, s * .16);
-      x.fillStyle = '#F3EAD8'; for (let i = 1; i < 4; i++) x.fillRect(s * i / 4 - s * .006, s * .02, s * .012, s * .14);
+      // a noren across the top: four indigo panels with uneven slits and a darker hem
+      x.fillStyle = '#2C4766'; x.fillRect(0, 0, s, s * .16);
+      x.fillStyle = 'rgba(0,0,0,.18)'; x.fillRect(0, s * .135, s, s * .025);
+      x.fillStyle = '#F1E4C8';
+      [[.245, .1], [.505, .12], [.75, .09]].forEach(([fx, fh]) => x.fillRect(s * fx - s * .006, s * .03, s * .012, s * fh));
     }
   }
   const k = mode === 'full' ? 1 : .72;
+  x.save();
   x.translate(s / 2, s / 2); x.scale(s * k / 1024, s * k / 1024); x.translate(-512, -512);
-  const INK = '#3A2B22';
+  const INK = '#33251E';
   const stroke = (w) => { x.lineWidth = w; x.strokeStyle = INK; x.lineJoin = 'round'; x.lineCap = 'round'; x.stroke(); };
-  // shadow
-  x.fillStyle = 'rgba(40,20,10,.22)'; x.beginPath(); x.ellipse(512, 915, 250, 42, 0, 0, 7); x.fill();
+  // printed fill: heavier ink on the shadow side (bottom right), colour a hair off register (up left), thin key line on top
+  const inked = (shape, col, w) => {
+    x.save(); x.translate(w * .3, w * .4); x.beginPath(); shape(); x.fillStyle = INK; x.fill(); x.restore();
+    x.save(); x.translate(-w * .5, -w * .35); x.beginPath(); shape(); x.fillStyle = col; x.fill(); x.restore();
+    x.beginPath(); shape(); stroke(w * .72);
+  };
+  const nick = (cx, cy, len, w, a) => { const dx = Math.cos(a) * len / 2, dy = Math.sin(a) * len / 2;
+    x.beginPath(); x.moveTo(cx - dx, cy - dy); x.quadraticCurveTo(cx - dy * .35, cy + dx * .35, cx + dx, cy + dy); x.strokeStyle = 'rgba(255,248,234,.9)'; x.lineWidth = w; x.lineCap = 'round'; x.stroke(); };
+  // shadow: flat and hard edged, offset to the right
+  x.fillStyle = 'rgba(60,30,20,.2)'; x.beginPath(); x.ellipse(530, 915, 250, 40, 0, 0, 7); x.fill();
   // body in an indigo happi coat
-  x.beginPath(); x.moveTo(330, 910); x.quadraticCurveTo(318, 770, 420, 760); x.lineTo(604, 760); x.quadraticCurveTo(706, 770, 694, 910); x.closePath();
-  x.fillStyle = '#2F4B6B'; x.fill(); stroke(14);
-  x.strokeStyle = '#F6EEDF'; x.lineWidth = 26; x.beginPath(); x.moveTo(440, 775); x.lineTo(512, 900); x.lineTo(584, 775); x.stroke();
-  // ears
-  const fur = '#FBF4E8';
+  inked(() => { x.moveTo(330, 910); x.quadraticCurveTo(318, 770, 420, 760); x.lineTo(604, 760); x.quadraticCurveTo(706, 770, 694, 910); x.closePath(); }, '#2C4766', 18);
+  x.strokeStyle = '#F4EBD9'; x.lineCap = 'round'; x.lineWidth = 26; x.beginPath(); x.moveTo(440, 775); x.lineTo(510, 900); x.stroke();
+  x.lineWidth = 22; x.beginPath(); x.moveTo(514, 900); x.lineTo(584, 775); x.stroke();
+  // ears: not a mirrored pair
+  const fur = '#FBF3E4';
   for (const sx of [-1, 1]) {
-    x.beginPath(); x.moveTo(512 + sx * 170, 600); x.lineTo(512 + sx * 150, 425); x.lineTo(512 + sx * 50, 505); x.closePath();
-    x.fillStyle = fur; x.fill(); stroke(14);
-    x.beginPath(); x.moveTo(512 + sx * 145, 570); x.lineTo(512 + sx * 138, 470); x.lineTo(512 + sx * 80, 520); x.closePath();
-    x.fillStyle = '#F2B3BE'; x.fill();
+    const tipX = sx < 0 ? 150 : 162, tipY = sx < 0 ? 425 : 438;
+    inked(() => { x.moveTo(512 + sx * 172, 600); x.lineTo(512 + sx * tipX, tipY); x.lineTo(512 + sx * 50, 505); x.closePath(); }, fur, 18);
+    x.beginPath(); x.moveTo(512 + sx * 145 - 8, 570 - 6); x.lineTo(512 + sx * (tipX - 10) - 8, tipY + 46 - 6); x.lineTo(512 + sx * 80 - 8, 520 - 6); x.closePath();
+    x.fillStyle = '#EFA7AF'; x.fill();
   }
-  // head with a brown patch
-  x.save(); x.beginPath(); x.ellipse(512, 640, 200, 178, 0, 0, 7); x.fillStyle = fur; x.fill(); x.clip();
-  x.fillStyle = '#D9A066'; x.beginPath(); x.ellipse(400, 560, 115, 95, 0, 0, 7); x.fill(); x.restore();
-  x.beginPath(); x.ellipse(512, 640, 200, 178, 0, 0, 7); stroke(16);
-  // hachimaki
-  x.beginPath(); x.moveTo(314, 612); x.quadraticCurveTo(512, 552, 710, 612); x.lineTo(706, 648); x.quadraticCurveTo(512, 590, 318, 648); x.closePath();
-  x.fillStyle = '#C8452F'; x.fill(); stroke(10);
-  for (const [dx, dy] of [[-80, -40], [-90, 30]]) { x.beginPath(); x.moveTo(318, 625); x.lineTo(318 + dx, 625 + dy - 18); x.lineTo(318 + dx + 10, 625 + dy + 18); x.closePath(); x.fillStyle = '#C8452F'; x.fill(); stroke(9); }
-  // eyes, nose, mouth, cheeks, whiskers
+  // head with an irregular calico patch
+  const head = () => x.ellipse(512, 640, 200, 178, 0, 0, 7);
+  inked(head, fur, 20);
+  x.save(); x.translate(-8, -6); x.beginPath(); head(); x.clip();
+  x.fillStyle = '#D69A5C'; x.beginPath(); x.moveTo(280, 470); x.lineTo(490, 455); x.bezierCurveTo(515, 520, 500, 580, 470, 600);
+  x.bezierCurveTo(440, 630, 400, 620, 380, 645); x.lineTo(300, 600); x.closePath(); x.fill(); x.restore();
+  x.beginPath(); head(); stroke(14);
+  // cheek tufts, one per side, not mirrored
+  x.beginPath(); x.moveTo(316, 668); x.lineTo(298, 690); x.lineTo(322, 700); stroke(9);
+  x.beginPath(); x.moveTo(705, 690); x.lineTo(726, 712); x.lineTo(694, 724); stroke(9);
+  // hachimaki and its tails
+  inked(() => { x.moveTo(314, 612); x.quadraticCurveTo(512, 552, 710, 612); x.lineTo(706, 648); x.quadraticCurveTo(512, 590, 318, 648); x.closePath(); }, '#C9432C', 14);
+  for (const [dx, dy] of [[-88, -40], [-74, 30]]) inked(() => { x.moveTo(318, 625); x.lineTo(318 + dx, 625 + dy - 18); x.lineTo(318 + dx + 10, 625 + dy + 18); x.closePath(); }, '#C9432C', 12);
+  // eyes, nose, mouth, blush, whiskers
   for (const sx of [-1, 1]) {
     x.fillStyle = INK; x.beginPath(); x.ellipse(512 + sx * 72, 670, 26, 34, 0, 0, 7); x.fill();
-    x.fillStyle = '#fff'; x.beginPath(); x.arc(512 + sx * 72 + 9, 656, 10, 0, 7); x.fill();
-    x.fillStyle = 'rgba(240,138,154,.5)'; x.beginPath(); x.arc(512 + sx * 125, 720, 24, 0, 7); x.fill();
-    x.strokeStyle = INK; x.lineWidth = 6; x.beginPath(); x.moveTo(512 + sx * 145, 700); x.lineTo(512 + sx * 235, 685); x.stroke();
-    x.beginPath(); x.moveTo(512 + sx * 145, 725); x.lineTo(512 + sx * 235, 735); x.stroke();
+    x.fillStyle = '#FFFBF0'; x.beginPath(); x.arc(512 + sx * 72 + 9, 656, 10, 0, 7); x.fill();
+    x.fillStyle = 'rgba(236,138,150,.42)'; x.beginPath(); x.ellipse(512 + sx * 125, 720, 30, 20, 0, 0, 7); x.fill();
+    x.strokeStyle = 'rgba(217,98,111,.65)'; x.lineWidth = 5; x.lineCap = 'round';
+    for (const h of [-12, 0, 12]) { x.beginPath(); x.moveTo(512 + sx * 125 + h + 4, 712); x.lineTo(512 + sx * 125 + h - 3, 728); x.stroke(); }
+    const wy = sx < 0 ? 0 : 6;
+    x.beginPath(); x.moveTo(512 + sx * 150, 700 + wy); x.quadraticCurveTo(512 + sx * 195, 684 + wy, 512 + sx * 240, 688 + wy); stroke(7);
+    x.beginPath(); x.moveTo(512 + sx * 150, 726 + wy); x.quadraticCurveTo(512 + sx * 195, 728 + wy, 512 + sx * (sx < 0 ? 236 : 222), 742 + wy); stroke(6);
   }
-  x.fillStyle = '#E07A8C'; x.beginPath(); x.arc(512, 712, 15, 0, 7); x.fill();
+  x.fillStyle = '#DB6F7E'; x.beginPath(); x.arc(512, 712, 15, 0, 7); x.fill();
   x.strokeStyle = INK; x.lineWidth = 8; x.beginPath(); x.arc(494, 728, 18, .3, Math.PI - .3); x.stroke(); x.beginPath(); x.arc(530, 728, 18, .3, Math.PI - .3); x.stroke();
   // stacked dishes
   const dishes = [['#F0C13F', 'egg'], ['#6FA64E', 'dango'], ['#E0564A', 'tomato']];
   dishes.forEach(([col, kind], i) => {
     const y = 425 - i * 115;
-    if (kind === 'egg') { x.beginPath(); x.roundRect(430, y - 88, 164, 80, 22); x.fillStyle = col; x.fill(); stroke(10);
+    if (kind === 'egg') { inked(() => x.roundRect(430, y - 88, 164, 80, 22), col, 14);
       x.strokeStyle = '#C98E1E'; x.lineWidth = 9; for (const dx of [-28, 28]) { x.beginPath(); x.moveTo(512 + dx, y - 82); x.lineTo(512 + dx, y - 16); x.stroke(); } }
     if (kind === 'dango') { x.strokeStyle = INK; x.lineWidth = 22; x.beginPath(); x.moveTo(420, y - 20); x.lineTo(604, y - 20); x.stroke();
       x.strokeStyle = '#D8B27A'; x.lineWidth = 10; x.beginPath(); x.moveTo(420, y - 20); x.lineTo(604, y - 20); x.stroke();
-      for (const dx of [-60, 0, 60]) { x.fillStyle = dx === 0 ? '#86B85F' : col; x.beginPath(); x.arc(512 + dx, y - 50, 36, 0, 7); x.fill(); stroke(9);
-        x.fillStyle = 'rgba(255,255,255,.45)'; x.beginPath(); x.arc(500 + dx, y - 62, 10, 0, 7); x.fill(); } }
-    if (kind === 'tomato') { x.beginPath(); x.arc(512, y - 58, 60, 0, 7); x.fillStyle = col; x.fill(); stroke(10);
-      x.fillStyle = 'rgba(255,255,255,.5)'; x.beginPath(); x.ellipse(488, y - 78, 16, 10, 0, 0, 7); x.fill();
+      for (const dx of [-60, 0, 60]) { inked(() => x.ellipse(512 + dx, y - 50, 37, 35, 0, 0, 7), dx === 0 ? '#A9C46A' : col, 13);
+        if (dx !== 0) nick(498 + dx, y - 62, 18, 8, -1.2); } }
+    if (kind === 'tomato') {
+      inked(() => { x.moveTo(512, y - 108); x.bezierCurveTo(560, y - 120, 584, y - 80, 572, y - 40); x.bezierCurveTo(560, y, 470, y + 2, 455, y - 26); x.bezierCurveTo(438, y - 64, 464, y - 114, 512, y - 108); x.closePath(); }, col, 14);
+      nick(482, y - 82, 26, 9, -1.1);
       x.fillStyle = '#4E8A3E'; x.beginPath();
       for (let a = 0; a < 5; a++) { const t = -Math.PI / 2 + a * 2 * Math.PI / 5; x.moveTo(512, y - 112); x.lineTo(512 + Math.cos(t - .4) * 12, y - 112 + Math.sin(t - .4) * 8); x.lineTo(512 + Math.cos(t) * 40, y - 112 + Math.sin(t) * 20); x.lineTo(512 + Math.cos(t + .4) * 12, y - 112 + Math.sin(t + .4) * 8); }
       x.fill(); stroke(6); }
     // plate (side view) in front of the food
-    x.beginPath(); x.moveTo(300, y - 6); x.quadraticCurveTo(512, y + 26, 724, y - 6); x.lineTo(650, y + 40); x.lineTo(374, y + 40); x.closePath();
-    x.fillStyle = '#FFFCF4'; x.fill(); stroke(10);
-    x.strokeStyle = '#4A6F9E'; x.lineWidth = 7; x.beginPath(); x.moveTo(330, y + 8); x.quadraticCurveTo(512, y + 34, 694, y + 8); x.stroke();
+    inked(() => { x.moveTo(300, y - 6); x.quadraticCurveTo(512, y + 26, 724, y - 6); x.lineTo(650, y + 40); x.lineTo(374, y + 40); x.closePath(); }, '#FFF9EC', 14);
+    x.strokeStyle = '#3F6596'; x.lineWidth = 7; x.beginPath(); x.moveTo(330, y + 8); x.quadraticCurveTo(512, y + 34, 694, y + 8); x.stroke();
   });
-  if (mode === 'mono') {}
+  x.restore();
+  // print texture over everything: starved specks and uneven coverage
+  x.save();
+  if (mode === 'fg') x.globalCompositeOperation = 'source-atop';
+  x.filter = 'blur(' + (s * .012) + 'px)';
+  for (let i = 0; i < 30; i++) { x.fillStyle = 'rgba(255,255,255,' + (.025 + rnd() * .03) + ')'; x.beginPath(); x.ellipse(rnd() * s, rnd() * s, s * (.02 + rnd() * .035), s * (.015 + rnd() * .03), rnd() * 3, 0, 7); x.fill(); }
+  x.filter = 'none';
+  for (let i = 0; i < 900; i++) { x.fillStyle = 'rgba(255,251,240,' + (.06 + rnd() * .2) + ')'; x.fillRect(rnd() * s, rnd() * s, s * .0015 + rnd() * s * .0015, s * .001 + rnd() * s * .001); }
+  x.restore();
   return c.toDataURL('image/png');
 }`;
 
