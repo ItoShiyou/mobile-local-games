@@ -317,7 +317,7 @@ class _Receipt extends StatelessWidget {
         children: [
           Row(
             children: [
-              const CourierPortrait(size: 44, look: Dir.down),
+              const CourierPortrait(size: 44, look: Dir.down, happy: true),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

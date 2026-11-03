@@ -61,6 +61,7 @@ flutter:
 
   assets:
     - assets/audio/
+    - assets/art/
     - assets/fonts/OFL.txt
     - assets/fonts/OFL-YuseiMagic.txt
 

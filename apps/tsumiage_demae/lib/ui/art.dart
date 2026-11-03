@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../game/engine.dart';
 import 'paper.dart';
+import 'sprites.dart';
 
 /// Sumi-brown ink used for every outline on the board.
 const kInk = Color(0xFF33251E);
@@ -252,12 +253,42 @@ class Art {
 
   // ------------------------------------------------------------ courier
 
+  /// How far above the head centre the first dish sits: the printed cat is
+  /// taller than the vector one.
+  static double stackBase(double u) => (CatSprites.pose('down') != null ? .45 : .3) * u;
+
+  /// The printed cat. Feet stand where the shadow is; the ears reach the
+  /// height the vector cat's did, so the dish stack still sits on the head.
+  static bool _courierSprite(Canvas canvas, Offset c, double u, Dir look, double phase, double hop, bool happy) {
+    final name = happy ? 'happy' : switch (look) { Dir.up => 'up', Dir.down => 'down', _ => 'right' };
+    final img = CatSprites.pose(name);
+    if (img == null) return false;
+    final h = u * .92, wd = h * CatSprites.aspect;
+    // a slow breath: the body squashes a hair about the feet
+    final breathe = 1 + math.sin(phase * 2.4) * .012;
+    final feet = Offset(c.dx, c.dy + u * .42 - hop);
+    canvas.save();
+    canvas.translate(feet.dx, feet.dy);
+    canvas.scale(look == Dir.left && !happy ? -1.0 : 1.0, breathe);
+    canvas.drawImageRect(
+      img,
+      Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+      Rect.fromLTWH(-wd / 2, -h, wd, h),
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+    canvas.restore();
+    return true;
+  }
+
+
   /// The delivery cat. [c] is the centre of the head. [phase] is the time
   /// in seconds for blinking and the tail.
-  static void courier(Canvas canvas, Offset c, double u, Dir look, Palette pal, {double phase = 0, double hop = 0}) {
+  static void courier(Canvas canvas, Offset c, double u, Dir look, Palette pal,
+      {double phase = 0, double hop = 0, bool happy = false}) {
     final w = u * .032;
     final head = c + Offset(0, -hop);
     shadow(canvas, c + Offset(0, u * .36), u * .52 - hop * .6, u * .16);
+    if (_courierSprite(canvas, c, u, look, phase, hop, happy)) return;
     // tail
     final side = look == Dir.left ? 1.0 : -1.0;
     final sway = math.sin(phase * 3.2) * u * .05;

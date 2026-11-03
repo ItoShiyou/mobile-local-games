@@ -1,0 +1,9 @@
+Use your image generation tool to create ONE character turnaround sheet for a mobile puzzle game mascot, and save it as ./cat_sheet.png in the current directory (copy the generated file here if needed). Do not do anything else.
+
+Character: a small calico (white / orange / a little brown) delivery cat, chubby and cute, standing upright like a tiny restaurant courier. Red hachimaki headband (twisted cloth knot at the side), indigo-blue happi coat with white lapels, short stubby arms raised slightly as if balancing a tray on its head (leave the area above the head EMPTY so game dishes can be stacked there). Sturdy little legs/feet, a swishing tail.
+
+Sheet layout: 4 views in one row, equal size, same scale, feet on the same baseline: (1) front view, (2) back view, (3) side view facing right, (4) front view with a happy closed-eye smile.
+
+Art style: looks hand-made, NOT generic vector or AI-gloss. Japanese woodblock / risograph print feel: confident brush-ink outlines with varying line weight (thicker on the shadow side, thinner on the lit side), flat colour fills with slight misregistration (colour slightly offset from the ink line), subtle paper grain and uneven pigment, 3-4 limited colours, NO gradients, NO glossy highlights, NO sparkles, NO text or letters. Slightly imperfect, asymmetrical, characterful shapes like a children's-book illustration by a human artist. Warm Showa-retro mood.
+
+Background: perfectly flat solid pure magenta (#FF00FF) everywhere, no shadows on the floor, no ground, no border, so it can be chroma-keyed out.

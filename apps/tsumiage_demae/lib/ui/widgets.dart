@@ -8,6 +8,7 @@ import '../app/theme.dart';
 import '../audio/sound.dart';
 import '../game/engine.dart';
 import 'art.dart';
+import 'sprites.dart';
 import 'ink_icons.dart';
 import 'paper.dart';
 
@@ -1016,20 +1017,22 @@ class _DishPainter extends CustomPainter {
 
 /// The courier on their own, for menus and speech.
 class CourierPortrait extends StatelessWidget {
-  const CourierPortrait({super.key, this.size = 56, this.look = Dir.down, this.stack = const []});
+  const CourierPortrait({super.key, this.size = 56, this.look = Dir.down, this.stack = const [], this.happy = false});
   final double size;
+  final bool happy;
   final Dir look;
   final List<String> stack;
 
   @override
   Widget build(BuildContext context) {
     final pal = context.palette;
-    return CustomPaint(size: Size(size, size * (1 + stack.length * .18)), painter: _CourierPainter(pal, look, stack));
+    return CustomPaint(size: Size(size, size * (1 + (CatSprites.pose('down') != null ? .15 : 0) + stack.length * .18)), painter: _CourierPainter(pal, look, stack, happy));
   }
 }
 
 class _CourierPainter extends CustomPainter {
-  _CourierPainter(this.pal, this.look, this.stack);
+  _CourierPainter(this.pal, this.look, this.stack, this.happy);
+  final bool happy;
   final Palette pal;
   final Dir look;
   final List<String> stack;
@@ -1037,14 +1040,14 @@ class _CourierPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final u = size.width;
     final head = Offset(u / 2, size.height - u * .58);
-    Art.courier(canvas, head, u, look, pal);
+    Art.courier(canvas, head, u, look, pal, happy: happy);
     for (var k = 0; k < stack.length; k++) {
-      Art.stackDish(canvas, head + Offset(0, -u * .3 - k * u * .16), u * 1.1, stack[k]);
+      Art.stackDish(canvas, head + Offset(0, -Art.stackBase(u) - k * u * .16), u * 1.1, stack[k]);
     }
   }
 
   @override
-  bool shouldRepaint(_CourierPainter o) => o.pal != pal || o.look != look || o.stack.join() != stack.join();
+  bool shouldRepaint(_CourierPainter o) => o.pal != pal || o.look != look || o.happy != happy || o.stack.join() != stack.join();
 }
 
 /// A wooden picture frame around [child] (a small diorama).
