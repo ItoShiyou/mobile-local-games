@@ -729,7 +729,7 @@ class BoardPainter {
 
     // ---- the stack on the head ----
     final top = head - Offset(0, hop);
-    Offset slot(int k) => top + Offset(0, -Art.stackBase(u) - k * u * .16);
+    Offset slot(int k) => top + Offset(0, -u * .3 - k * u * .16);
     final du = u * 1.1;
 
     var shown = s.stack;

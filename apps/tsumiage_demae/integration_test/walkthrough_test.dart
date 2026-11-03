@@ -18,7 +18,6 @@ import 'package:tsumiage_demae/game/levels.dart';
 import 'package:tsumiage_demae/game/solver.dart';
 import 'package:tsumiage_demae/ui/game_screen.dart';
 import 'package:tsumiage_demae/ui/how_to_play_screen.dart';
-import 'package:tsumiage_demae/ui/sprites.dart';
 
 const _lang = String.fromEnvironment('LANG', defaultValue: 'ja');
 const _theme = String.fromEnvironment('THEME', defaultValue: 'light');
@@ -35,7 +34,6 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('walkthrough', (tester) async {
-    await CatSprites.load();
     SharedPreferences.setMockInitialValues({'settings.language': _lang, 'settings.theme': _theme});
     final sp = await SharedPreferences.getInstance();
     await tester.pumpWidget(TsumiageApp(settings: Settings(sp), progress: Progress(sp), sound: PluginSound()));

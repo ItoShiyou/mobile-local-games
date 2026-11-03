@@ -7,7 +7,6 @@ import 'app/app.dart';
 import 'app/progress.dart';
 import 'app/settings.dart';
 import 'audio/sound.dart';
-import 'ui/sprites.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +16,6 @@ Future<void> main() async {
     final yusei = await rootBundle.loadString('assets/fonts/OFL-YuseiMagic.txt');
     yield LicenseEntryWithLineBreaks(['Yusei Magic'], yusei);
   });
-  await CatSprites.load();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SharedPreferences prefs;
   try {

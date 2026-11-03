@@ -186,11 +186,11 @@ class _TitleScreenState extends State<TitleScreen> with SingleTickerProviderStat
                 // the cat waiting at the door
                 Positioned(
                   left: math.max(56.0, doorL - 40 * k),
-                  top: ground - 159 * k,
+                  top: ground - 118 * k,
                   child: IgnorePointer(
                     child: Transform.translate(
                       offset: Offset(0, math.sin(t * 3) * 1.5),
-                      child: CourierPortrait(size: 104 * k, stack: const ['c', 'b', 'a'], look: Dir.right),
+                      child: CourierPortrait(size: 84 * k, stack: const ['c', 'b', 'a'], look: Dir.right),
                     ),
                   ),
                 ),
