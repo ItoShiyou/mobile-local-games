@@ -157,7 +157,10 @@ class _ShopWall extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(flex: 5, child: Text(chapter.title(lang), maxLines: 1, overflow: TextOverflow.ellipsis, style: display(24, pal.onNoren))),
+                  Expanded(
+                    flex: 5,
+                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(chapter.title(lang), maxLines: 1, style: display(24, pal.onNoren))),
+                  ),
                   Flexible(
                     flex: 2,
                     child: FittedBox(

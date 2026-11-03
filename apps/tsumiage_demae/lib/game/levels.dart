@@ -447,7 +447,7 @@ final List<Chapter> chapters = [
         '##.#.E#',
         '#######',
       ]),
-      Level(id: 'n03', ja: '遠回りのわけ', en: 'The Long Way Round', par: 14, map: [
+      Level(id: 'n03', ja: '遠回りのわけ', en: 'Why the Detour', par: 14, map: [
         '#######',
         '#..cbF#',
         '#..#..#',
@@ -561,7 +561,7 @@ final List<Chapter> chapters = [
         '#..P.W#',
         '#######',
       ]),
-      Level(id: 'w08', ja: '満席御礼', en: 'Full House', par: 24, cap: 3, orders: ['cb'], map: [
+      Level(id: 'w08', ja: '満席御礼', en: 'No Empty Seats', par: 24, cap: 3, orders: ['cb'], map: [
         '########',
         '##a...A#',
         '#.W<.A.#',

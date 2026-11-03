@@ -417,11 +417,11 @@ class _StandBoard extends StatelessWidget {
                             Row(
                               children: [
                                 if (main) ...[const InkIcon(InkGlyph.play, size: 16, color: Color(0xFFF2A08E)), const SizedBox(width: 4)],
-                                Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: display(main ? 21 : 18, pal.chalk))),
+                                Flexible(child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(label, maxLines: 1, style: display(main ? 21 : 18, pal.chalk)))),
                               ],
                             ),
                             if (sub != null)
-                              Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: display(13, pal.chalk.withValues(alpha: .75))),
+                              FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(sub, maxLines: 1, style: display(13, pal.chalk.withValues(alpha: .75)))),
                           ],
                         ),
                       ),

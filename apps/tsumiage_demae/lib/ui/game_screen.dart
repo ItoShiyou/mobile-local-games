@@ -501,9 +501,13 @@ class _TopBand extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('${level.chapter.title(lang)}  ${level.chapter.number}-${level.number}',
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: display(11.5, pal.onNoren.withValues(alpha: .8))),
-                    Text(level.name(lang), maxLines: 1, overflow: TextOverflow.ellipsis, style: display(21, pal.onNoren, height: 1.15)),
+                    // long names shrink to fit rather than lose their ends
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('${level.chapter.title(lang)}  ${level.chapter.number}-${level.number}',
+                          maxLines: 1, style: display(11.5, pal.onNoren.withValues(alpha: .8))),
+                    ),
+                    FittedBox(fit: BoxFit.scaleDown, child: Text(level.name(lang), maxLines: 1, style: display(21, pal.onNoren, height: 1.15))),
                   ],
                 ),
               ),
