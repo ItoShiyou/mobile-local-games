@@ -102,7 +102,7 @@ Deliver within par for three stamps. Your best move count is saved for every sta
 | --- | --- | --- |
 | カテゴリ | ゲーム > パズル（サブ：ファミリー） | ゲーム > パズル |
 | 価格 | 無料 | 無料 |
-| 年齢 | 4+ | IARC：全年齢（3+ / Everyone） |
+| 年齢 | 13+ | IARC：全年齢（3+ / Everyone） |
 | 著作権表記 | © 2026 KEITO OZONO | — |
 | サポートURL | `store/support.html` を公開したURL | — |
 | プライバシーポリシーURL | `store/privacy-policy.html` を公開したURL | 同左 |

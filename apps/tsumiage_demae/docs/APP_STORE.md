@@ -16,7 +16,7 @@ Mac がなくても公開できるように、署名とアップロードは Git
 | アイコン | 1024×1024 を含む全サイズ（App Store の規定どおりアルファチャンネルなし） |
 | プライバシーマニフェスト | `ios/Runner/PrivacyInfo.xcprivacy`（トラッキングなし・収集データなし・UserDefaults は理由 CA92.1） |
 | 輸出コンプライアンス | `ITSAppUsesNonExemptEncryption = false`（暗号化なし。提出時の質問は出ない） |
-| スクリーンショット | `store/screenshots/ios/{ja,en}/`（iPhone 6.9インチ 1290×2796）。各6枚。iPhone 専用なので iPad 用は不要 |
+| スクリーンショット | `store/screenshots/ios-6.3/{ja,en}/`（必須枠「Dynamic Island搭載iPhone（中型）」用の 1206×2622）。各6枚。元画像は `store/screenshots/ios/`（1290×2796）。iPhone 専用なので iPad 用は不要 |
 | 掲載文 | `store/listing.md`（日英。文字数チェック済み） |
 | 申告の回答 | `store/declarations.md` |
 
@@ -92,8 +92,8 @@ Mac がなくても公開できるように、署名とアップロードは Git
 | --- | --- |
 | サブタイトル | `store/listing.md` の「サブタイトル」 |
 | カテゴリ | プライマリ：ゲーム、サブカテゴリ：パズル／ファミリー |
-| 年齢制限指定 | すべて「なし」→ 4+（`store/declarations.md`） |
-| コンテンツ配信権 | 「サードパーティのコンテンツを含まない」 |
+| 年齢制限指定 | アルコールの言及のみ「まれ」、他は「なし」→ 13+（`store/declarations.md`） |
+| コンテンツ配信権 | 「はい」（第三者のフォント〔OFL〕を含み、使用する権利がある） |
 | 英語（米国）のローカライズ | 右上の言語から「英語（米国）」を追加。名前 `Stack & Deliver` と英語の掲載文を入れる |
 
 ### App のプライバシー（左メニュー）
@@ -110,7 +110,7 @@ Mac がなくても公開できるように、署名とアップロードは Git
 
 | 項目 | 入力 |
 | --- | --- |
-| スクリーンショット（iPhone 6.9インチ） | `store/screenshots/ios/ja/01.png`〜`06.png`（英語のページには `ios/en/`） |
+| スクリーンショット（Dynamic Island搭載iPhone 中型） | `store/screenshots/ios-6.3/ja/01.png`〜`06.png`（英語のページには `ios-6.3/en/`） |
 | プロモーションテキスト・概要・キーワード | `store/listing.md` からそのまま |
 | サポートURL | 下の「公開URLの用意」 |
 | 著作権 | `2026 （開発者名）` |
