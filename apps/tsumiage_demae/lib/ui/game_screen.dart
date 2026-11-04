@@ -19,6 +19,7 @@ import 'ink_icons.dart';
 import 'paper.dart';
 import 'scene.dart';
 import 'settings_screen.dart';
+import 'stage_select_screen.dart';
 import 'widgets.dart';
 import 'world_controls.dart';
 
@@ -159,6 +160,10 @@ class _GameScreenState extends State<GameScreen> {
     Navigator.of(context).pushReplacement(GameScreen.route(next));
   }
 
+  void _toStages() {
+    Navigator.of(context).pushAndRemoveUntil(StageSelectScreen.route(), (r) => r.isFirst);
+  }
+
   Future<void> _showAllClear() async {
     final s = Strings.of(context);
     await showNotice<void>(
@@ -168,7 +173,7 @@ class _GameScreenState extends State<GameScreen> {
       body: Text(s.allClearBody),
       actions: [Builder(builder: (context) => WoodButton(kind: WoodKind.shu, label: s.toStages, onPressed: () => Navigator.pop(context)))],
     );
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) _toStages();
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
@@ -278,7 +283,7 @@ class _GameScreenState extends State<GameScreen> {
                 reduceMotion: reduce,
                 onNext: _next,
                 onRetry: _restart,
-                onStages: () => Navigator.of(context).pop(),
+                onStages: _toStages,
               ),
             ),
         ],

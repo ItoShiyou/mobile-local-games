@@ -138,16 +138,17 @@ class _TitleScreenState extends State<TitleScreen> with SingleTickerProviderStat
                     ),
                   ),
                 ),
-                // settings: a small tag hanging under the eaves
+                // settings: a labelled tag hanging below the lantern
                 Positioned(
-                  top: eave + 6,
+                  top: eave + 104,
                   right: 12,
                   child: HangingTag(
                     glyph: InkGlyph.settings,
                     label: s.settings,
-                    showLabel: false,
-                    width: 42,
-                    height: 44,
+                    showLabel: true,
+                    width: 58,
+                    height: 66,
+                    wood: TagWood.dark,
                     string: 14,
                     onPressed: () => Navigator.of(context).push(SettingsScreen.route()),
                   ),

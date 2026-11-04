@@ -13,7 +13,11 @@ import 'package:tsumiage_demae/game/solver.dart';
 import 'package:tsumiage_demae/ui/board_view.dart';
 import 'package:tsumiage_demae/ui/game_screen.dart';
 import 'package:tsumiage_demae/ui/how_to_play_screen.dart';
+import 'package:tsumiage_demae/ui/ink_icons.dart';
+import 'package:tsumiage_demae/ui/paper.dart';
 import 'package:tsumiage_demae/ui/settings_screen.dart';
+import 'package:tsumiage_demae/ui/title_screen.dart';
+import 'package:tsumiage_demae/ui/widgets.dart';
 import 'package:tsumiage_demae/ui/world_controls.dart';
 import 'package:tsumiage_demae/ui/stage_select_screen.dart';
 
@@ -156,6 +160,64 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
+  testWidgets('the result menu returns from a title game to stages with title beneath', (tester) async {
+    await boot(tester, prefs: {'progress.intro.v1': seen});
+    await tester.tap(find.text('はじめる'));
+    await settle(tester);
+    expect(tester.widget<GameScreen>(find.byType(GameScreen)).level, allLevels.first);
+    for (var i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await settle(tester);
+    expect(find.text('毎度あり！'), findsOneWidget);
+    await tester.tap(find.text('お品書き'));
+    await settle(tester);
+    await settle(tester);
+    await settle(tester);
+    expect(find.byType(StageSelectScreen), findsOneWidget);
+    expect(find.byType(GameScreen, skipOffstage: false), findsNothing);
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await settle(tester);
+    await settle(tester);
+    await settle(tester);
+    expect(find.byType(TitleScreen), findsOneWidget);
+    expect(find.byType(StageSelectScreen, skipOffstage: false), findsNothing);
+  });
+
+  for (final lang in const ['ja', 'en']) {
+    for (final size in const [Size(320, 568), Size(375, 667), Size(402, 874)]) {
+      testWidgets('title settings is labelled, clear of decorations and opens at ${size.width.toInt()}x${size.height.toInt()} ($lang)', (tester) async {
+        await boot(tester, prefs: {'settings.language': lang});
+        await tester.binding.setSurfaceSize(size);
+        await tester.pump();
+        final label = lang == 'ja' ? '設定' : 'Settings';
+        final settingsTag = tag(label);
+        final widget = tester.widget<HangingTag>(settingsTag);
+        expect(widget.showLabel, isTrue);
+        expect(widget.wood, TagWood.dark);
+        expect(widget.width, 58);
+        expect(widget.height, 66);
+        expect(find.descendant(of: settingsTag, matching: find.text(label)), findsOneWidget);
+        expect(find.descendant(of: settingsTag, matching: find.byWidgetPredicate((w) => w is InkIcon && w.glyph == InkGlyph.settings)), findsOneWidget);
+        final rect = tester.getRect(settingsTag);
+        expect(rect.width, greaterThanOrEqualTo(48));
+        expect(rect.height, greaterThanOrEqualTo(48));
+        expect((Offset.zero & size).contains(rect.topLeft), isTrue);
+        expect((Offset.zero & size).contains(rect.bottomRight), isTrue);
+        expect(rect.overlaps(tester.getRect(find.byType(Signboard))), isFalse);
+        expect(rect.overlaps(tester.getRect(find.byType(PaperSlip))), isFalse);
+        final eave = 96 * (size.height / 844).clamp(.68, 1.2);
+        final lantern = Rect.fromCenter(center: Offset(size.width * .73 + 30, eave + 70), width: 34, height: 46);
+        expect(rect.overlaps(lantern), isFalse);
+        expect(tester.takeException(), isNull);
+        await tester.tap(settingsTag);
+        await settle(tester);
+        expect(find.byType(SettingsScreen), findsOneWidget);
+      });
+    }
+  }
+
   testWidgets('the tray pad moves the cat, and holding it keeps walking', (tester) async {
     await boot(tester, prefs: {'progress.intro.v1': seen});
     await open(tester, allLevels.firstWhere((l) => l.id == 'b08'));
@@ -240,6 +302,10 @@ void main() {
     await settle(tester);
     await settle(tester);
     expect(find.byType(GameScreen), findsNothing);
+    expect(find.byType(StageSelectScreen), findsOneWidget);
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await settle(tester);
+    expect(find.byType(TitleScreen), findsOneWidget);
   });
 
   testWidgets('progress survives a restart and "continue" goes to the next stage', (tester) async {
