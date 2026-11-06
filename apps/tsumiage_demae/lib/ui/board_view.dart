@@ -52,6 +52,7 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
   double _bumpStart = -10;
   Offset? _dragOrigin;
   SceneLayers? _layers;
+  bool _disposed = false;
 
   @override
   void initState() {
@@ -97,11 +98,19 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
+    _disposed = true;
+    final layers = _layers;
+    _layers = null;
+    if (layers != null) _retireLayers(layers);
     widget.controller.removeListener(_onChange);
     _ticker.dispose();
     _clock.dispose();
-    _layers?.dispose();
     super.dispose();
+  }
+
+  void _retireLayers(SceneLayers layers) {
+    // Pictures may still be referenced by the frame currently being painted.
+    SchedulerBinding.instance.addPostFrameCallback((_) => layers.dispose());
   }
 
   SceneLayers layersFor(double u, Palette pal) {
@@ -109,8 +118,9 @@ class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMix
     final night = pal.night || widget.scene.alwaysNight;
     final key = SceneLayers.keyFor(b, u, widget.scene, night);
     if (_layers?.key != key) {
-      _layers?.dispose();
+      final old = _layers;
       _layers = SceneLayers.build(b, u, widget.scene, pal, night);
+      if (old != null) _retireLayers(old);
     }
     return _layers!;
   }
@@ -205,6 +215,7 @@ class _AnimatedBoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (!view.mounted || view._disposed) return;
     final f = view.frame(pal);
     final b = f.bump;
     if (b != null && f.bumpP < 1 && (b.reason == Blocked.wall || b.reason == Blocked.oneWay)) {

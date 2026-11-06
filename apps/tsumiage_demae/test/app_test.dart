@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -145,6 +147,66 @@ void main() {
   }
 
   const seen = <String>['howto', 'counter', 'tray', 'oneWay', 'catTongue', 'shared', 'cart'];
+
+  testWidgets('board layers survive resizing, navigation and late paints', (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final (settings, _) = await boot(tester, prefs: {'progress.intro.v1': seen});
+    settings.reduceMotionSetting = false;
+    final nav = tester.state<NavigatorState>(find.byType(Navigator));
+
+    Future<void> pump([Duration duration = const Duration(milliseconds: 16)]) async {
+      await tester.pump(duration);
+      expect(tester.takeException(), isNull);
+    }
+
+    Future<void> resize() async {
+      for (final size in const [Size(320, 568), Size(820, 1180), Size(390, 844), Size(430, 932)]) {
+        await tester.binding.setSurfaceSize(size);
+        await pump();
+      }
+    }
+
+    for (var visit = 0; visit < 2; visit++) {
+      nav.push(GameScreen.route(allLevels.first));
+      await pump();
+      await pump(const Duration(milliseconds: 400));
+      await resize();
+      final boardPaint = find.descendant(of: find.byType(BoardView), matching: find.byType(CustomPaint));
+      final painter = tester.widget<CustomPaint>(boardPaint).painter!;
+      final size = tester.getSize(boardPaint);
+      nav.pop();
+      await pump();
+      await pump(const Duration(milliseconds: 400));
+      await pump();
+
+      // A repaint already queued for a removed board must draw nothing.
+      final recorder = ui.PictureRecorder();
+      try {
+        expect(() => painter.paint(Canvas(recorder), size), returnsNormally);
+      } finally {
+        recorder.endRecording().dispose();
+      }
+      expect(tester.takeException(), isNull);
+    }
+
+    nav.push(HowToPlayScreen.route());
+    await pump();
+    await pump(const Duration(milliseconds: 400));
+    for (var page = 0; page < 4; page++) {
+      expect(tester.widget<PageView>(find.byType(PageView)).controller!.page, closeTo(page.toDouble(), .01));
+      await resize();
+      if (page < 3) {
+        await tester.drag(find.byType(PageView), const Offset(-400, 0));
+        await pump();
+        await pump(const Duration(milliseconds: 400));
+      }
+    }
+    nav.pop();
+    await pump();
+    await pump(const Duration(milliseconds: 400));
+    await pump();
+    expect(find.byType(TitleScreen), findsOneWidget);
+  });
 
   Future<void> open(WidgetTester tester, Level level) async {
     tester.state<NavigatorState>(find.byType(Navigator)).push(GameScreen.route(level));
