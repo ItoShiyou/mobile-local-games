@@ -643,21 +643,30 @@ class BoardPainter {
       Art.floorDish(canvas, Offset((d.pos.x + .5) * u, (d.pos.y + .5) * u), u, d.color);
     }
 
+    // The bump is read once into plain locals. The release (AOT) build used
+    // to load `bump.dir` before checking `bump` for null, because `bump` was
+    // also captured by drawGuest, and that crashed on iPad (App Review,
+    // iPadOS 27). Nothing below dereferences the bump again.
     final bump = f.bump;
+    final Blocked? bumpReason = bump?.reason;
+    final int bumpDx = bump == null ? 0 : bump.dir.dx;
+    final int bumpDy = bump == null ? 0 : bump.dir.dy;
+    final String? bumpWanted = bump?.wanted;
+    final Pos? bumped = bumpReason == null ? null : Pos(s.pos.x + bumpDx, s.pos.y + bumpDy);
 
     // ---- carts (they slide when pushed) ----
     for (var i = 0; i < board.carts.length; i++) {
       var at = s.carts[i];
       var c = Offset((at.x + .5) * u, (at.y + .5) * u);
       var load = s.isLoaded(i) ? board.carts[i].load : null;
-      if (pushed?.cartIndex == i && tr != null && p < 1 && !tr.isUndo) {
-        final from = Offset((pushed!.from.x + .5) * u, (pushed.from.y + .5) * u);
+      final push = pushed;
+      if (push != null && push.cartIndex == i && tr != null && p < 1 && !tr.isUndo) {
+        final from = Offset((push.from.x + .5) * u, (push.from.y + .5) * u);
         c = Offset.lerp(from, c, Curves.easeOutCubic.transform(_seg(p, .15, .8)))!;
-        if (pushed.served != null && p < .78) load = board.carts[i].load;
+        if (push.served != null && p < .78) load = board.carts[i].load;
       }
       var tilt = 0.0;
-      if (bump != null && bump.reason == Blocked.cartStuck && f.bumpP < 1 &&
-          s.pos.x + bump.dir.dx == at.x && s.pos.y + bump.dir.dy == at.y) {
+      if (bumpReason == Blocked.cartStuck && f.bumpP < 1 && bumped == at) {
         tilt = math.sin(f.bumpP * math.pi * 6) * .06;
       }
       Art.cart(canvas, c, u, load, tilt: tilt);
@@ -679,20 +688,22 @@ class BoardPainter {
       if (a != pos && !tr.isUndo) hop = math.sin(_seg(p, 0, walkEnd) * math.pi) * u * .08;
       pos = Offset.lerp(a, pos, wp)!;
     }
-    final bq = bump == null ? 1.0 : f.bumpP;
+    final bq = bumpReason == null ? 1.0 : f.bumpP;
 
     // ---- guests above the courier's row, courier, then the rest ----
     final catRow = pos.dy;
+    // drawGuest only captures plain values, never a nullable object it then
+    // dereferences (see the note on the bump above).
+    final int? servedGuest = served?.guestIndex;
+    final int? pushServedGuest = pushed?.served;
     void drawGuest(int i) {
       final g = board.guests[i];
       final o = Offset(g.pos.x * u, g.pos.y * u);
-      final beingServed = (served?.guestIndex == i && p < .72) || (pushed?.served == i && p < .97);
+      final beingServed = (servedGuest == i && p < .72) || (pushServedGuest == i && p < .97);
       final done = s.isServed(i) && !beingServed;
-      final wrong = bump != null && bump.reason == Blocked.wrongDish && f.bumpAge < 1.1 &&
-          s.pos.x + bump.dir.dx == g.pos.x && s.pos.y + bump.dir.dy == g.pos.y;
+      final wrong = bumpReason == Blocked.wrongDish && f.bumpAge < 1.1 && bumped == g.pos;
       // a cat-tongued guest shown a steaming dish fans the ticket instead
-      final hot = bump != null && bump.reason == Blocked.tooHot && f.bumpAge < .8 &&
-          s.pos.x + bump.dir.dx == g.pos.x && s.pos.y + bump.dir.dy == g.pos.y;
+      final hot = bumpReason == Blocked.tooHot && f.bumpAge < .8 && bumped == g.pos;
       final bob = done ? math.sin(t * 4 + i) * u * .01 : 0.0;
       Art.guest(canvas, o, u, i, pal,
           mood: done ? Mood.happy : (wrong ? Mood.upset : Mood.waiting), phase: t, servedDish: done ? g.wants[0] : null, bob: bob);
@@ -700,7 +711,7 @@ class BoardPainter {
         var bc = o + Offset(u * .76, u * .12 + math.sin(t * 2 + i) * u * .015);
         if ((wrong || hot) && f.bumpAge < .5) bc += Offset(math.sin(f.bumpAge * math.pi * 12) * u * .04, 0);
         Art.orderTicket(canvas, bc, u, g.wants, upset: wrong, scale: wrong || hot ? 1.12 : 1, cool: g.catTongue);
-      } else if ((served?.guestIndex == i || pushed?.served == i) && f.transitionAge < 1.4) {
+      } else if ((servedGuest == i || pushServedGuest == i) && f.transitionAge < 1.4) {
         // a little tune when the order arrives
         final k = (f.transitionAge / 1.4).clamp(0.0, 1.0);
         final tp = TextPainter(
@@ -721,8 +732,8 @@ class BoardPainter {
     if (tr != null && p < 1 && (served != null || returned != null) && tr.dir != null) {
       lean = Offset(tr.dir!.dx.toDouble(), tr.dir!.dy.toDouble()) * math.sin(_seg(p, 0, .6) * math.pi) * u * .2;
     }
-    if (bump != null && bq < 1) {
-      lean += Offset(bump.dir.dx.toDouble(), bump.dir.dy.toDouble()) * math.sin(bq * math.pi) * u * .12;
+    if (bumpReason != null && bq < 1) {
+      lean += Offset(bumpDx.toDouble(), bumpDy.toDouble()) * math.sin(bq * math.pi) * u * .12;
     }
     final head = center + lean + Offset(0, math.sin(t * 2 * math.pi / 1.8) * u * .01);
     Art.courier(canvas, head, u, s.facing, pal, phase: t, hop: hop);
@@ -743,7 +754,7 @@ class BoardPainter {
     }
     final flipping = flipped && tr != null && p < 1 && p >= flipA;
     final steamy = board.guests.any((g) => g.catTongue);
-    final wobble = bump != null && bq < 1 && bump.reason == Blocked.full ? math.sin(bq * math.pi * 5) * u * .03 : 0.0;
+    final wobble = bq < 1 && bumpReason == Blocked.full ? math.sin(bq * math.pi * 5) * u * .03 : 0.0;
     if (flipping) {
       final q = Curves.easeInOut.transform(_seg(p, flipA, 1));
       final pre = picked != null ? [...tr.from.stack, picked.color] : tr.from.stack;
@@ -763,8 +774,8 @@ class BoardPainter {
       // moment to show the one the guest wanted, glowing underneath: you can
       // see for yourself that it went on too early.
       var buried = -1;
-      if (bump != null && bump.reason == Blocked.wrongDish && f.bumpAge < 1.8) {
-        buried = shown.lastIndexOf(bump.wanted ?? '');
+      if (bumpReason == Blocked.wrongDish && f.bumpAge < 1.8) {
+        buried = shown.lastIndexOf(bumpWanted ?? '');
       }
       final age = f.bumpAge;
       final reveal = age < .25
