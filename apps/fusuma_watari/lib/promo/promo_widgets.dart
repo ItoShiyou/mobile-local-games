@@ -138,6 +138,8 @@ class LaunchNotice extends StatefulWidget {
 }
 
 class _LaunchNoticeState extends State<LaunchNotice> {
+  /// The card is only in the tree while it is (or is animating) on screen.
+  bool _mounted = false;
   bool _shown = false;
   bool _line = true;
   Timer? _hide;
@@ -156,7 +158,11 @@ class _LaunchNoticeState extends State<LaunchNotice> {
     final hasApp = Promo.latest != null;
     setState(() {
       _line = hasLine && (!hasApp || Promo.noticeIndex.isEven);
-      _shown = true;
+      _mounted = true;
+    });
+    // Start off-screen for one frame, then slide in.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _shown = true);
     });
     _hide = Timer(Duration(seconds: Promo.current.noticeSeconds), _close);
   }
@@ -173,6 +179,8 @@ class _LaunchNoticeState extends State<LaunchNotice> {
 
   @override
   Widget build(BuildContext context) {
+    // Always a Stack so the app (child) keeps its state when the card comes and goes.
+    if (!_mounted) return Stack(children: [widget.child]);
     final app = Promo.latest;
     final cs = Theme.of(context).colorScheme;
     final isLine = _line || app == null;
@@ -186,6 +194,9 @@ class _LaunchNoticeState extends State<LaunchNotice> {
           left: 12,
           right: 12,
           top: _shown ? top : -160,
+          onEnd: () {
+            if (!_shown && mounted) setState(() => _mounted = false);
+          },
           child: Material(
             color: cs.surface,
             elevation: 6,
