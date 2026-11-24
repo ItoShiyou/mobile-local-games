@@ -1,3 +1,5 @@
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -7,6 +9,7 @@ import 'progress.dart';
 import 'scope.dart';
 import 'settings.dart';
 import 'theme.dart';
+import '../promo/promo_widgets.dart';
 
 class TsumiageApp extends StatefulWidget {
   const TsumiageApp({super.key, required this.settings, required this.progress, required this.sound});
@@ -73,7 +76,14 @@ class _TsumiageAppState extends State<TsumiageApp> with WidgetsBindingObserver {
           ],
           // Text is part of painted signs, tags and tickets that have a fixed
           // size, so larger system text is honoured only up to a point.
-          builder: (context, child) => MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: child!),
+          builder: (context, child) => MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.3,
+            // 公式LINE・最新アプリの案内は日本語表示のときだけ
+            child: LaunchNotice(
+              suppressed: () => PlatformDispatcher.instance.locale.languageCode != 'ja',
+              child: child!,
+            ),
+          ),
           home: const TitleScreen(),
         ),
       ),

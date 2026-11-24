@@ -7,6 +7,7 @@ import 'app/app.dart';
 import 'app/progress.dart';
 import 'app/settings.dart';
 import 'audio/sound.dart';
+import 'promo/promo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,7 @@ Future<void> main() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
   }
+  Promo.init('fusuma_watari');
   runApp(FusumaApp(
     settings: Settings(prefs),
     progress: Progress(prefs),

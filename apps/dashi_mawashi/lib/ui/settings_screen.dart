@@ -10,6 +10,7 @@ import 'how_to_play_screen.dart';
 import 'ink_icons.dart';
 import 'paper.dart';
 import 'widgets.dart';
+import '../promo/promo.dart';
 
 const appVersion = '1.1.0';
 
@@ -127,6 +128,16 @@ class SettingsScreen extends StatelessWidget {
                         page(53, [
                           _LinkRow(glyph: InkGlyph.book, label: s.howToPlay, onTap: () => Navigator.of(context).push(HowToPlayScreen.route())),
                           rule(),
+                          if (Localizations.localeOf(context).languageCode == 'ja' && Promo.current.enabled) ...[
+                            if (Promo.lineUri != null) ...[
+                              const _LinkRow(glyph: InkGlyph.info, label: '公式LINE（新作・お知らせ）', onTap: Promo.openLine),
+                              rule(),
+                            ],
+                            if (Promo.latest case final app?) ...[
+                              _LinkRow(glyph: InkGlyph.play, label: '最新アプリ「${app.name}」', onTap: () => Promo.openApp(app)),
+                              rule(),
+                            ],
+                          ],
                           _LinkRow(
                             glyph: InkGlyph.menu,
                             label: s.licenses,
