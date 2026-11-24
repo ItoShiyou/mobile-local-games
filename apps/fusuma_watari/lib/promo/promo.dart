@@ -20,8 +20,12 @@ class Promo {
   static String selfId = '';
   static PromoConfig current = PromoConfig.fallback;
 
-  /// Notice launches so far; even = LINE, odd = latest app.
+  /// Notice launches so far; even = LINE, odd = an app.
   static int noticeIndex = 0;
+
+  /// Launch count; picks which of the other apps is recommended this time,
+  /// so every app takes turns promoting every other app.
+  static int rotation = 0;
 
   static bool _noticeDue = false;
   static Future<void>? _refreshing;
@@ -44,6 +48,7 @@ class Promo {
       }
       final launches = (sp.getInt(_launchKey) ?? 0) + 1;
       await sp.setInt(_launchKey, launches);
+      rotation = launches;
       _noticeDue = isNoticeLaunch(launches, current);
       if (current.launchEvery > 0) {
         noticeIndex = launches ~/ current.launchEvery;
@@ -101,7 +106,15 @@ class Promo {
     return u.isEmpty ? null : Uri.tryParse(u);
   }
 
-  static PromoApp? get latest => current.latestFor(selfId);
+  /// The app recommended this launch (never this app itself).
+  static PromoApp? get latest => current.pickFor(selfId, rotation);
+
+  static Uri? get allAppsUri =>
+      current.allAppsUrl.isEmpty ? null : Uri.tryParse(current.allAppsUrl);
+
+  static Future<void> openAllApps() async {
+    if (current.allAppsUrl.isNotEmpty) await _open(tracked(current.allAppsUrl));
+  }
 
   /// App Store links get `ct` (App Analytics campaign), others get UTM.
   static Uri tracked(String url) {
@@ -168,7 +181,9 @@ class PromoConfig {
     this.enabled = true,
     this.lineUrl = '',
     this.lineUrlByApp = const {},
-    this.lineCopy = '新作やお知らせを LINE でおとどけします',
+    this.lineCopy = 'THE Bonjin の新作・お知らせを LINE でおとどけします',
+    this.brand = 'THE Bonjin',
+    this.allAppsUrl = '',
     this.apps = const [],
     this.launchEvery = 3,
     this.skipFirstLaunches = 1,
@@ -179,6 +194,8 @@ class PromoConfig {
   final String lineUrl;
   final Map<String, String> lineUrlByApp;
   final String lineCopy;
+  final String brand;
+  final String allAppsUrl;
   final List<PromoApp> apps;
   final int launchEvery;
   final int skipFirstLaunches;
@@ -186,23 +203,51 @@ class PromoConfig {
 
   /// Bundled default, used until promo.json has been fetched once.
   static const fallback = PromoConfig(
-    lineUrl: 'https://line.me/R/ti/p/@400kkcxl',
+    lineUrl: 'https://line.me/R/ti/p/@629zrowt',
+    allAppsUrl: 'https://bonjin.gitpullpull.me/apps.html',
     apps: [
       PromoApp(
-        id: 'english_lesson',
-        name: 'Mimi English',
-        copy: 'AI英会話・医学英語をオフラインで',
-        url: 'https://englishlesson-eight.vercel.app/',
-        iconUrl: 'https://itoshiyou.github.io/hub/icons/english_lesson.png',
+        id: 'handangaku',
+        name: 'ハンダン',
+        copy: '日常の「どう判断する？」を学べる無料アプリ',
+        url: 'https://apps.apple.com/jp/app/id6831944228',
+        iconUrl: 'https://itoshiyou.github.io/hub/icons/handangaku.png',
+      ),
+      PromoApp(
+        id: 'tsumiage_demae',
+        name: 'つみあげ出前',
+        copy: '料理を頭に積んで届ける、ねこの出前パズル',
+        url: 'https://apps.apple.com/jp/app/id6829997215',
+        iconUrl: 'https://itoshiyou.github.io/hub/icons/tsumiage_demae.png',
+      ),
+      PromoApp(
+        id: 'omoide_hyakkaten',
+        name: 'おもいで百貨店',
+        copy: 'デパート屋上の小さな遊園地をよみがえらせる',
+        url: 'https://apps.apple.com/jp/app/id6829372905',
+        iconUrl: 'https://itoshiyou.github.io/hub/icons/omoide_hyakkaten.png',
+      ),
+      PromoApp(
+        id: 'stained_light',
+        name: '光の窓割り',
+        copy: '解けた瞬間、窓いっぱいに光があふれる論理パズル',
+        url: 'https://apps.apple.com/jp/app/id6824348602',
+        iconUrl: 'https://itoshiyou.github.io/hub/icons/stained_light.png',
       ),
     ],
   );
 
-  PromoApp? latestFor(String selfId) {
-    for (final a in apps) {
-      if (a.id != selfId) return a;
-    }
-    return null;
+  /// First app that is not this one (the newest, as apps are newest first).
+  PromoApp? latestFor(String selfId) => pickFor(selfId, 0);
+
+  /// Takes turns through the other apps: [rotation] 0 = newest.
+  PromoApp? pickFor(String selfId, int rotation) {
+    final others = [
+      for (final a in apps)
+        if (a.id != selfId) a,
+    ];
+    if (others.isEmpty) return null;
+    return others[rotation % others.length];
   }
 
   bool hasAnything(String selfId) =>
@@ -230,6 +275,10 @@ class PromoConfig {
         lineCopy: j['line_copy'] is String
             ? j['line_copy'] as String
             : fallback.lineCopy,
+        brand: j['brand'] is String ? j['brand'] as String : fallback.brand,
+        allAppsUrl: j['all_apps_url'] is String
+            ? j['all_apps_url'] as String
+            : '',
         apps: [
           if (j['apps'] is List)
             for (final a in j['apps'] as List) ?PromoApp.fromJson(a),

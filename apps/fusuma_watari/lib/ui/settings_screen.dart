@@ -130,11 +130,15 @@ class SettingsScreen extends StatelessWidget {
                           rule(),
                           if (Localizations.localeOf(context).languageCode == 'ja' && Promo.current.enabled) ...[
                             if (Promo.lineUri != null) ...[
-                              const _LinkRow(glyph: InkGlyph.info, label: '公式LINE（新作・お知らせ）', onTap: Promo.openLine),
+                              _LinkRow(glyph: InkGlyph.info, label: '${Promo.current.brand} 公式LINE', onTap: Promo.openLine),
                               rule(),
                             ],
                             if (Promo.latest case final app?) ...[
-                              _LinkRow(glyph: InkGlyph.play, label: '最新アプリ「${app.name}」', onTap: () => Promo.openApp(app)),
+                              _LinkRow(glyph: InkGlyph.play, label: 'おすすめ「${app.name}」', onTap: () => Promo.openApp(app)),
+                              rule(),
+                            ],
+                            if (Promo.allAppsUri != null) ...[
+                              _LinkRow(glyph: InkGlyph.menu, label: '${Promo.current.brand} のアプリ一覧', onTap: Promo.openAllApps),
                               rule(),
                             ],
                           ],

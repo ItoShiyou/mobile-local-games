@@ -47,14 +47,17 @@ class PromoPanel extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             child: Text(
-              'お知らせ・ほかのアプリ',
+              '${Promo.current.brand} のアプリ・お知らせ',
               style: tt.labelLarge?.copyWith(color: textColor),
             ),
           ),
         if (line != null)
           ListTile(
             leading: const Icon(Icons.chat_bubble_rounded, color: _lineGreen),
-            title: Text('公式LINE', style: TextStyle(color: textColor)),
+            title: Text(
+              '${Promo.current.brand} 公式LINE',
+              style: TextStyle(color: textColor),
+            ),
             subtitle: Text(
               Promo.current.lineCopy,
               style: TextStyle(color: textColor?.withValues(alpha: 0.7)),
@@ -70,7 +73,7 @@ class PromoPanel extends StatelessWidget {
           ListTile(
             leading: _appIcon(context, app, 36),
             title: Text(
-              '最新アプリ「${app.name}」',
+              'おすすめ「${app.name}」',
               style: TextStyle(color: textColor),
             ),
             subtitle: Text(
@@ -83,6 +86,16 @@ class PromoPanel extends StatelessWidget {
               color: textColor,
             ),
             onTap: () => Promo.openApp(app),
+          ),
+        if (Promo.allAppsUri != null)
+          ListTile(
+            leading: Icon(Icons.apps_rounded, color: textColor),
+            title: Text(
+              '${Promo.current.brand} のアプリ一覧',
+              style: TextStyle(color: textColor),
+            ),
+            trailing: Icon(Icons.open_in_new_rounded, size: 18, color: textColor),
+            onTap: Promo.openAllApps,
           ),
       ],
     );
@@ -115,7 +128,7 @@ class PromoStrip extends StatelessWidget {
           TextButton(
             onPressed: () => Promo.openApp(app),
             child: Text(
-              '新作「${app.name}」',
+              '「${app.name}」も遊ぶ',
               style: TextStyle(fontSize: 12, color: c.withValues(alpha: 0.75)),
             ),
           ),
@@ -230,7 +243,9 @@ class _LaunchNoticeState extends State<LaunchNotice> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            isLine ? '公式LINEはじめました' : '新作「${app.name}」',
+                            isLine
+                                ? '${Promo.current.brand} 公式LINE'
+                                : 'おすすめ「${app.name}」',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,

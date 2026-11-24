@@ -15,6 +15,16 @@ void main() {
     expect(PromoConfig.tryParse('{oops'), isNull);
   });
 
+  test('takes turns through the other apps', () {
+    const c = PromoConfig(apps: [
+      PromoApp(id: 'fusuma_watari', name: 's', copy: '', url: 'https://a/'),
+      PromoApp(id: 'b', name: 'b', copy: '', url: 'https://b/'),
+      PromoApp(id: 'c', name: 'c', copy: '', url: 'https://c/'),
+    ]);
+    expect([for (var r = 0; r < 4; r++) c.pickFor('fusuma_watari', r)!.id], ['b', 'c', 'b', 'c']);
+    expect(const PromoConfig().pickFor('fusuma_watari', 3), isNull);
+  });
+
   test('launch notice: every 3rd launch, never the first', () {
     const c = PromoConfig(launchEvery: 3, skipFirstLaunches: 1);
     final shown = [
